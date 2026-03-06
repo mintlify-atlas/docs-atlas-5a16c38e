@@ -1,0 +1,425 @@
+---
+title: Class Callbacks
+description: Organize your route handlers using classes and methods
+---
+
+## Overview
+
+Instead of using closures, you can organize your route handlers into classes. Perritu/Router supports multiple formats for specifying class callbacks, making it flexible and easy to structure your code.
+
+## Callback Formats
+
+The Router supports three different formats for class callbacks:
+
+<CodeGroup>
+
+```php Array Format
+use App\Controllers\UserController;
+
+Router::GET('/', [UserController::class, 'index']);
+```
+
+```php Double Colon (::)
+Router::GET('/', 'App\\Controllers\\UserController::index');
+```
+
+```php At Sign (@)
+Router::GET('/', 'App/Controllers/UserController@index');
+```
+
+</CodeGroup>
+
+<Note>
+All three formats work identically. Use whichever style you prefer. The `@` format allows you to use forward slashes (`/`) instead of backslashes (`\\`), which can be more convenient.
+</Note>
+
+## Basic Controller Example
+
+Here's a simple controller class:
+
+```php
+<?php
+
+namespace App\Controllers;
+
+class HomeController
+{
+    public function index()
+    {
+        echo '<h1>Welcome to the homepage!</h1>';
+    }
+    
+    public function about()
+    {
+        echo '<h1>About Us</h1>';
+    }
+}
+```
+
+Define routes for this controller:
+
+```php
+use Perritu\Router\Router;
+use App\Controllers\HomeController;
+
+Router::init();
+
+Router::GET('/', [HomeController::class, 'index']);
+Router::GET('/about', [HomeController::class, 'about']);
+```
+
+## Using Parameters
+
+Class methods receive captured regex groups as parameters, just like closures:
+
+```php
+<?php
+
+namespace App\Controllers;
+
+class UserController
+{
+    public function show(int $userId)
+    {
+        echo "<h1>User Profile #$userId</h1>";
+    }
+    
+    public function posts(int $userId, string $slug)
+    {
+        echo "<h1>Post '$slug' by User #$userId</h1>";
+    }
+}
+```
+
+Route definitions:
+
+```php
+use App\Controllers\UserController;
+
+// Route: /user/123
+Router::GET(
+    ['/user/(\d+)', Router::PREG],
+    [UserController::class, 'show']
+);
+
+// Route: /user/123/post/my-first-post
+Router::GET(
+    ['/user/(\d+)/post/([\w-]+)', Router::PREG],
+    [UserController::class, 'posts']
+);
+```
+
+## Using $ClassPrefix
+
+The `$ClassPrefix` property allows you to set a namespace prefix for all string-based callbacks:
+
+```php
+use Perritu\Router\Router;
+
+// Set the class prefix
+Router::$ClassPrefix = 'App\\Controllers';
+
+// Now you can use short class names
+Router::GET('/', 'HomeController::index');
+Router::GET('/users', 'UserController::index');
+Router::GET('/posts', 'PostController@index');
+
+// These are equivalent to:
+// Router::GET('/', 'App\\Controllers\\HomeController::index');
+// Router::GET('/users', 'App\\Controllers\\UserController::index');
+// Router::GET('/posts', 'App\\Controllers\\PostController@index');
+```
+
+<Tip>
+Use `$ClassPrefix` to reduce repetition when all your controllers are in the same namespace. This keeps your route definitions clean and maintainable.
+</Tip>
+
+## Static vs Instance Methods
+
+The Router creates a new instance of your controller class and calls the method on it. You can use both static and instance methods:
+
+<CodeGroup>
+
+```php Instance Method
+class UserController
+{
+    // Instance property
+    private $db;
+    
+    public function __construct()
+    {
+        // Constructor runs before the method
+        $this->db = new Database();
+    }
+    
+    public function index()
+    {
+        // Can access instance properties
+        $users = $this->db->query('SELECT * FROM users');
+        echo json_encode($users);
+    }
+}
+```
+
+```php Static Method
+class UserController
+{
+    public static function index()
+    {
+        // Static methods don't need instance state
+        echo json_encode(['message' => 'Hello']);
+    }
+}
+```
+
+</CodeGroup>
+
+<Note>
+The Router instantiates the controller class even for static methods, but static methods don't have access to `$this`. Use instance methods when you need to maintain state or inject dependencies.
+</Note>
+
+## RESTful Controller Example
+
+Here's a complete RESTful controller:
+
+```php
+<?php
+
+namespace App\Controllers\Api;
+
+class ArticleController
+{
+    public function index()
+    {
+        // GET /api/articles - List all articles
+        header('Content-Type: application/json');
+        echo json_encode([
+            ['id' => 1, 'title' => 'First Article'],
+            ['id' => 2, 'title' => 'Second Article']
+        ]);
+    }
+    
+    public function show(int $id)
+    {
+        // GET /api/articles/1 - Show specific article
+        header('Content-Type: application/json');
+        echo json_encode(['id' => $id, 'title' => 'Article ' . $id]);
+    }
+    
+    public function store()
+    {
+        // POST /api/articles - Create new article
+        header('Content-Type: application/json');
+        echo json_encode(['message' => 'Article created', 'id' => 123]);
+    }
+    
+    public function update(int $id)
+    {
+        // PUT /api/articles/1 - Update article
+        header('Content-Type: application/json');
+        echo json_encode(['message' => "Article $id updated"]);
+    }
+    
+    public function destroy(int $id)
+    {
+        // DELETE /api/articles/1 - Delete article
+        header('Content-Type: application/json');
+        echo json_encode(['message' => "Article $id deleted"]);
+    }
+}
+```
+
+Route definitions:
+
+```php
+use Perritu\Router\Router;
+use App\Controllers\Api\ArticleController;
+
+Router::init();
+
+// List articles
+Router::GET('/api/articles', [ArticleController::class, 'index']);
+
+// Show article
+Router::GET(
+    ['/api/articles/(\d+)', Router::PREG],
+    [ArticleController::class, 'show']
+);
+
+// Create article
+Router::POST('/api/articles', [ArticleController::class, 'store']);
+
+// Update article
+Router::PUT(
+    ['/api/articles/(\d+)', Router::PREG],
+    [ArticleController::class, 'update']
+);
+
+// Delete article
+Router::DELETE(
+    ['/api/articles/(\d+)', Router::PREG],
+    [ArticleController::class, 'destroy']
+);
+```
+
+## Method Visibility
+
+Only public methods can be used as route handlers:
+
+```php
+class UserController
+{
+    // ✅ Can be used as a route handler
+    public function index()
+    {
+        echo 'Public method';
+    }
+    
+    // ❌ Cannot be used as a route handler
+    protected function helper()
+    {
+        return 'Helper data';
+    }
+    
+    // ❌ Cannot be used as a route handler
+    private function internal()
+    {
+        return 'Internal data';
+    }
+}
+```
+
+<Note>
+If you try to route to a non-public method, the Router will throw an exception: "Method [name] in class [class] is not public."
+</Note>
+
+## Error Handling
+
+The Router throws exceptions for invalid class callbacks:
+
+```php
+try {
+    Router::GET('/', 'NonExistentClass::index');
+} catch (Exception $e) {
+    // "Class NonExistentClass not found."
+    echo $e->getMessage();
+}
+
+try {
+    Router::GET('/', [UserController::class, 'nonExistentMethod']);
+} catch (Exception $e) {
+    // "Method nonExistentMethod not found in class UserController."
+    echo $e->getMessage();
+}
+```
+
+## Organizing Controllers
+
+Here's a recommended project structure:
+
+```
+project/
+├── public/
+│   └── index.php          # Entry point with routes
+├── src/
+│   └── Controllers/
+│       ├── HomeController.php
+│       ├── UserController.php
+│       └── Api/
+│           ├── ArticleController.php
+│           └── UserController.php
+└── vendor/
+```
+
+Entry point (`public/index.php`):
+
+```php
+<?php
+
+require_once '../vendor/autoload.php';
+
+use Perritu\Router\Router;
+
+Router::init();
+Router::$ClassPrefix = 'App\\Controllers';
+
+// Web routes
+Router::GET('/', 'HomeController::index');
+Router::GET('/users', 'UserController::index');
+Router::GET(['/users/(\d+)', Router::PREG], 'UserController::show');
+
+// API routes
+Router::$ClassPrefix = 'App\\Controllers\\Api';
+Router::GET('/api/articles', 'ArticleController::index');
+Router::GET(['/api/articles/(\d+)', Router::PREG], 'ArticleController::show');
+Router::POST('/api/articles', 'ArticleController::store');
+```
+
+<Tip>
+You can change `$ClassPrefix` throughout your route definitions to organize routes into different namespaces.
+</Tip>
+
+## Complete Example
+
+Here's a complete working example:
+
+```php
+<?php
+
+// File: src/Controllers/BlogController.php
+namespace App\Controllers;
+
+class BlogController
+{
+    public function index()
+    {
+        echo '<h1>Blog Posts</h1>';
+        echo '<ul>';
+        echo '<li><a href="/blog/hello-world">Hello World</a></li>';
+        echo '<li><a href="/blog/php-routing">PHP Routing</a></li>';
+        echo '</ul>';
+    }
+    
+    public function show(string $slug)
+    {
+        echo "<h1>Post: $slug</h1>";
+        echo '<p>This is the content of the post.</p>';
+        echo '<a href="/blog">Back to all posts</a>';
+    }
+    
+    public function archive(int $year, int $month)
+    {
+        echo "<h1>Archive: $month/$year</h1>";
+        echo '<p>Posts from this month...</p>';
+    }
+}
+
+// File: public/index.php
+require_once '../vendor/autoload.php';
+
+use Perritu\Router\Router;
+use App\Controllers\BlogController;
+
+Router::init();
+
+// List all posts
+Router::GET('/blog', [BlogController::class, 'index']);
+
+// Show specific post
+Router::GET(
+    ['/blog/([\w-]+)', Router::PREG],
+    [BlogController::class, 'show']
+);
+
+// Archive by year and month
+Router::GET(
+    ['/blog/(\d{4})/(\d{2})', Router::PREG],
+    [BlogController::class, 'archive']
+);
+```
+
+## Next Steps
+
+- Learn about [Namespace Routing](/examples/namespace-routing) for automatic route resolution
+- Explore [Matching Criteria](/concepts/matching-criteria) for route prefixes using $CriteriaPrefix
+- Review the [API Reference](/api/router-class) for complete Router class documentation

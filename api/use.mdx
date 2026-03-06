@@ -1,0 +1,262 @@
+---
+title: "Router::USE()"
+description: "Mount a namespace for class-based routing"
+---
+
+## Description
+
+```php
+public static function USE(
+    string $Namespace,
+    string $MountPoint,
+    int $MethodBit = self::ANY,
+    bool $Terminate = true
+): void
+```
+
+Mounts a given namespace to handle requests for a specific path prefix. This enables class-based routing where the directory structure of your classes mirrors the URL structure.
+
+## How It Works
+
+The `USE()` method maps request paths to classes within a namespace:
+
+1. Checks if the request path starts with the `$MountPoint`
+2. Removes the mount point prefix from the path
+3. Constructs a class name: `\{Namespace}\{RemainingPath}`
+4. Looks for a public method matching the HTTP method (e.g., `GET`, `POST`)
+5. If found, instantiates the class and calls the method
+
+## Parameters
+
+<ParamField path="Namespace" type="string" required>
+  The PHP namespace to use for class resolution. Must be a valid PHP namespace without leading backslash.
+  
+  Example: `'App\Controllers'`
+</ParamField>
+
+<ParamField path="MountPoint" type="string" required>
+  The path prefix where the namespace will be mounted. Requests starting with this path will be resolved using the namespace.
+  
+  Example: `'/api'` will handle all requests starting with `/api`
+</ParamField>
+
+<ParamField path="MethodBit" type="int" default="Router::ANY">
+  Bitwise representation of the HTTP methods to handle. Defaults to `Router::ANY` (all methods).
+  
+  Can combine multiple methods:
+  - `Router::GET | Router::POST`
+  - `Router::ANY` (default)
+</ParamField>
+
+<ParamField path="Terminate" type="bool" default="true">
+  If `true`, execution terminates after a successful match. Set to `false` to continue execution after the handler runs.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="return" type="void">
+  This method does not return a value.
+</ResponseField>
+
+## Exceptions
+
+Unlike `Router::MATCH()`, this method does **not** throw exceptions. If a class cannot be found or has no matching method, the route is simply treated as not matched and execution continues.
+
+## Class Structure Requirements
+
+For a class to be routable via `USE()`:
+
+1. Must be in the specified namespace
+2. Must have public methods named after HTTP methods in **UPPERCASE** (e.g., `GET`, `POST`, `PUT`)
+3. Methods can be static or non-static
+4. Class will be automatically instantiated when needed
+
+## Examples
+
+### Basic Namespace Mounting
+
+```php
+use Perritu\Router\Router;
+
+Router::init();
+
+// Mount the App\Controllers namespace at /api
+Router::USE('App\Controllers', '/api');
+```
+
+With this configuration:
+- Request: `GET /api/users` → Looks for `App\Controllers\users::GET()`
+- Request: `POST /api/users` → Looks for `App\Controllers\users::POST()`
+- Request: `GET /api/posts` → Looks for `App\Controllers\posts::GET()`
+
+### Example Controller Class
+
+```php
+namespace App\Controllers;
+
+class users {
+    // Handle GET /api/users
+    public function GET() {
+        echo json_encode([
+            ['id' => 1, 'name' => 'John'],
+            ['id' => 2, 'name' => 'Jane']
+        ]);
+    }
+    
+    // Handle POST /api/users
+    public function POST() {
+        $data = json_decode(file_get_contents('php://input'), true);
+        // Create new user
+        echo json_encode(['success' => true]);
+    }
+    
+    // Handle PUT /api/users
+    public function PUT() {
+        // Update user
+        echo json_encode(['updated' => true]);
+    }
+    
+    // Handle DELETE /api/users
+    public function DELETE() {
+        // Delete user
+        echo json_encode(['deleted' => true]);
+    }
+}
+```
+
+### Nested Paths
+
+```php
+// Mount at /api/v1
+Router::USE('App\API\V1', '/api/v1');
+```
+
+```php
+namespace App\API\V1;
+
+// Handles GET /api/v1/products
+class products {
+    public function GET() {
+        echo json_encode(['products' => []]);
+    }
+}
+
+// Handles GET /api/v1/orders
+class orders {
+    public function GET() {
+        echo json_encode(['orders' => []]);
+    }
+}
+```
+
+### Limiting HTTP Methods
+
+```php
+// Only handle GET and POST requests
+Router::USE(
+    'App\Controllers',
+    '/api',
+    Router::GET | Router::POST
+);
+
+// PUT and DELETE requests to /api/* will not be handled by this namespace
+```
+
+### Non-Terminating Handler
+
+```php
+// Don't terminate after handling
+Router::USE(
+    'App\Middleware',
+    '/admin',
+    Router::ANY,
+    false  // Continue execution
+);
+
+// Additional routes can still match after the namespace handler runs
+Router::GET('/admin/dashboard', function() {
+    echo 'Dashboard';
+});
+```
+
+### Multiple Namespace Mounts
+
+```php
+Router::init();
+
+// API v1
+Router::USE('App\API\V1', '/api/v1');
+
+// API v2
+Router::USE('App\API\V2', '/api/v2');
+
+// Admin panel
+Router::USE('App\Admin', '/admin');
+
+// Public pages
+Router::USE('App\Public', '/');
+```
+
+## Advanced Example
+
+```php
+namespace App\Controllers;
+
+class users {
+    private $db;
+    
+    public function __construct() {
+        // Initialize dependencies
+        $this->db = new Database();
+    }
+    
+    public function GET() {
+        $users = $this->db->query('SELECT * FROM users');
+        
+        header('Content-Type: application/json');
+        echo json_encode($users);
+    }
+    
+    public function POST() {
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        // Validate input
+        if (empty($input['name']) || empty($input['email'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Name and email required']);
+            return;
+        }
+        
+        // Create user
+        $userId = $this->db->insert('users', $input);
+        
+        http_response_code(201);
+        echo json_encode(['id' => $userId, 'success' => true]);
+    }
+}
+```
+
+## Path Resolution Example
+
+Given this setup:
+
+```php
+Router::USE('MyApp\API', '/api');
+```
+
+Path resolution works as follows:
+
+| Request | Class Looked Up | Method Called |
+|---------|----------------|---------------|
+| `GET /api/users` | `\MyApp\API\users` | `GET()` |
+| `POST /api/posts` | `\MyApp\API\posts` | `POST()` |
+| `GET /api/admin/reports` | `\MyApp\API\admin\reports` | `GET()` |
+
+## Notes
+
+- The method name must be **UPPERCASE** (e.g., `GET`, not `get`)
+- The method must be **public** (private and protected methods are ignored)
+- The class is automatically instantiated, so constructors are called
+- If no matching class or method is found, execution continues normally (no exception thrown)
+- The `$ClassPrefix` static property is temporarily cleared during namespace dispatch
+- This is ideal for building RESTful APIs with class-based controllers

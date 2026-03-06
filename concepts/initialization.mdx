@@ -1,0 +1,165 @@
+---
+title: Initialization
+description: Learn how to initialize the Perritu Router to handle HTTP requests
+---
+
+The Router must be initialized before it can match routes and dispatch callbacks. Initialization captures the current HTTP request details (path, method, host, port) and prepares the router for matching operations.
+
+## Static vs Object-Oriented
+
+The Router provides two ways to initialize: a static method and a constructor.
+
+### Static Initialization
+
+Use `Router::init()` for a static approach:
+
+```php
+use Perritu\Router\Router;
+
+Router::init();
+```
+
+The `init()` method returns the class name as a string, allowing for method chaining:
+
+```php
+Router::init()::GET('/users', function() {
+    echo 'User list';
+});
+```
+
+### Object-Oriented Initialization
+
+Use `new Router()` for an object-oriented approach:
+
+```php
+$router = new Router();
+```
+
+Both approaches call the same underlying initialization logic. Choose based on your application's architectural style.
+
+## Method Signature
+
+```php
+public static function init(
+    ?string $Path = null,
+    ?string $Method = null,
+    ?string $Host = null,
+    ?int $Port = null
+): string
+```
+
+## Parameters
+
+<ParamField path="Path" type="string" default="$_SERVER['REQUEST_URI']">
+  The request path to be processed. When `null`, defaults to the current request URI.
+</ParamField>
+
+<ParamField path="Method" type="string" default="$_SERVER['REQUEST_METHOD']">
+  The HTTP method as a string. When `null`, defaults to the current request method.
+  
+  Valid values: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`
+</ParamField>
+
+<ParamField path="Host" type="string" default="$_SERVER['HTTP_HOST']">
+  The host name. When `null`, defaults to the current request host.
+</ParamField>
+
+<ParamField path="Port" type="int" default="$_SERVER['SERVER_PORT']">
+  The port number. When `null`, defaults to the current request port.
+</ParamField>
+
+## What Initialization Does
+
+When you call `init()` or `new Router()`, the following happens:
+
+1. **Request Parsing**: The method constructs a full request string using the provided or default parameters
+2. **Path Normalization**: Cleans up the path by removing duplicate slashes and relative path segments (`../`, `./`)
+3. **Method Conversion**: Converts the HTTP method string to a bitwise constant stored in `Router::$MethodBit`
+4. **Static Property Assignment**: Sets `Router::$Path` and `Router::$Method` for use in matching operations
+
+<Info>
+The router automatically calls `init()` with default parameters if you attempt to match routes without initializing first.
+</Info>
+
+## Overriding Request Details
+
+You can override specific parts of the request while keeping others at their defaults:
+
+### Override Path Only
+
+```php
+Router::init('/api/v1/users');
+```
+
+This is useful for testing or when you want to route to a specific path programmatically.
+
+### Override Method Only
+
+```php
+Router::init(null, 'GET');
+```
+
+Use `null` for parameters you don't want to override.
+
+### Override Both Path and Method
+
+```php
+Router::init('/admin/dashboard', 'POST');
+```
+
+## Testing and Simulation
+
+Overriding request parameters is particularly useful in testing scenarios:
+
+```php
+// Simulate a POST request to a specific endpoint
+Router::init('/api/users', 'POST');
+
+Router::POST('/api/users', function() {
+    return ['status' => 'created'];
+});
+```
+
+## Error Handling
+
+<Warning>
+The `init()` method throws an `\Exception` if:
+- The `$Method` parameter contains an invalid HTTP verb
+- The request data cannot be parsed into valid URL components
+</Warning>
+
+Always use valid HTTP methods:
+
+```php
+// Valid
+Router::init(null, 'GET');
+Router::init(null, 'POST');
+
+// Invalid - throws Exception
+Router::init(null, 'INVALID');
+```
+
+## Auto-Initialization
+
+If you forget to call `init()`, the router automatically initializes itself with default parameters when you call `MATCH()` or any routing method:
+
+```php
+// No explicit init() call needed
+Router::GET('/', function() {
+    echo 'Home page';
+});
+```
+
+<Tip>
+While auto-initialization is convenient, explicitly calling `init()` at the start of your routing script makes the code flow clearer and allows for request override when needed.
+</Tip>
+
+## Initialization State
+
+After initialization, the following static properties are set:
+
+- `Router::$Path` - The normalized request path (string)
+- `Router::$Method` - The HTTP method as a string (e.g., `"GET"`)
+- `Router::$MethodBit` - The bitwise representation of the method (int)
+
+These properties are used internally by all routing methods to match against your defined routes.

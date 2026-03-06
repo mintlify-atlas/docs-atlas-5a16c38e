@@ -1,97 +1,128 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Perritu/Router"
+description: "A lightweight, simple, yet blazing fast PHP router for handling HTTP requests with static and dynamic routing."
 ---
 
-## Setting up
+<div style={{textAlign: 'center', padding: '3rem 0 2rem 0'}}>
+  <h1 style={{fontSize: '3rem', fontWeight: 700, marginBottom: '1rem', color: '#824010'}}>
+    Perritu/Router
+  </h1>
+  <p style={{fontSize: '1.25rem', color: '#333333', maxWidth: '800px', margin: '0 auto 2rem'}}>
+    A lightweight, simple, yet blazing fast PHP router for handling HTTP requests with static and dynamic routing.
+  </p>
+</div>
 
-Get your documentation site up and running in minutes.
+## Quick Start
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+Get started with Perritu/Router in minutes.
 
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
+<CardGroup cols={2}>
   <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
+    title="Installation"
+    icon="download"
+    href="/installation"
   >
-    Edit your docs locally and preview them in real time.
+    Install via Composer or download directly
   </Card>
   <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
+    title="Quickstart Guide"
+    icon="rocket"
+    href="/quickstart"
   >
-    Customize the design and colors of your site to match your brand.
+    Build your first route in under 5 minutes
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
+</CardGroup>
+
+## Key Features
+
+Powerful routing capabilities for modern PHP applications.
+
+<CardGroup cols={2}>
+  <Card
+    title="HTTP Method Routing"
+    icon="globe"
   >
-    Organize your docs to help users find what they need and succeed with your product.
+    Support for GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS, and ANY methods
   </Card>
   <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
+    title="Dynamic Routing"
     icon="code"
-    href="/essentials/code"
   >
-    Add sample code to demonstrate how to use your product.
+    PCRE-based pattern matching with regex support for complex routes
   </Card>
   <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
+    title="Flexible Callbacks"
+    icon="function"
   >
-    Display images and other media.
+    Use closures, class methods, or string references as route handlers
   </Card>
   <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
+    title="Namespace Mounting"
+    icon="folder-tree"
   >
-    Write once and reuse across your docs.
+    Organize routes with namespace mounting and route prefixes
   </Card>
-</Columns>
+</CardGroup>
 
-## Need inspiration?
+## Core Concepts
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+Learn the fundamental concepts behind Perritu/Router.
+
+<CardGroup cols={3}>
+  <Card
+    title="Initialization"
+    icon="play"
+    href="/concepts/initialization"
+  >
+    Set up the router and configure request handling
+  </Card>
+  <Card
+    title="Routing Methods"
+    icon="route"
+    href="/concepts/routing-methods"
+  >
+    Understand HTTP method shortcuts and matching
+  </Card>
+  <Card
+    title="Matching Criteria"
+    icon="check"
+    href="/concepts/matching-criteria"
+  >
+    Learn about static and regex-based route matching
+  </Card>
+  <Card
+    title="Callbacks"
+    icon="code-branch"
+    href="/concepts/callbacks"
+  >
+    Explore different callback formats and usage
+  </Card>
+  <Card
+    title="Namespace Mounting"
+    icon="sitemap"
+    href="/concepts/namespace-mounting"
+  >
+    Mount namespaces for organized route structures
+  </Card>
+</CardGroup>
+
+## API Reference
+
+Comprehensive API documentation for all router methods.
+
+<CardGroup cols={2}>
+  <Card
+    title="Router Class"
+    icon="book"
+    href="/api/router-class"
+  >
+    Overview of the Router class and its properties
+  </Card>
+  <Card
+    title="Method Reference"
+    icon="list"
+    href="/api/shortcuts"
+  >
+    Complete reference for all routing methods
+  </Card>
+</CardGroup>

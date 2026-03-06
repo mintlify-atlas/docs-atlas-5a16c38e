@@ -1,0 +1,193 @@
+---
+title: Basic Routing
+description: Learn how to create simple routes with GET, POST, and other HTTP methods
+---
+
+## Overview
+
+Perritu/Router provides simple, expressive methods for defining routes. Each HTTP method has a dedicated function that makes routing intuitive and clean.
+
+## Simple GET Route
+
+The most basic route accepts a path and a closure:
+
+```php
+use Perritu\Router\Router;
+
+// Initialize the router
+Router::init();
+
+// Define a simple GET route
+Router::GET('/', function() {
+    echo 'Hello World!';
+});
+```
+
+## HTTP Method Routes
+
+The Router supports all standard HTTP methods. Each method has its own function:
+
+<CodeGroup>
+
+```php GET
+Router::GET('/users', function() {
+    echo 'List all users';
+});
+```
+
+```php POST
+Router::POST('/users', function() {
+    echo 'Create a new user';
+});
+```
+
+```php PUT
+Router::PUT('/users/123', function() {
+    echo 'Update user 123';
+});
+```
+
+```php PATCH
+Router::PATCH('/users/123', function() {
+    echo 'Partially update user 123';
+});
+```
+
+```php DELETE
+Router::DELETE('/users/123', function() {
+    echo 'Delete user 123';
+});
+```
+
+</CodeGroup>
+
+## Returning Values
+
+By default, routes terminate execution after running. To return values instead, set the `$Terminate` parameter to `false`:
+
+```php
+// This route returns a value instead of terminating
+$result = Router::GET('/api/status', function() {
+    return ['status' => 'online', 'version' => '1.0'];
+}, false);
+
+// You can now use $result in your code
+echo json_encode($result);
+```
+
+<Note>
+When `$Terminate` is set to `true` (default), PHP execution stops after the callback runs. Set it to `false` to continue execution and capture the return value.
+</Note>
+
+## Handling Multiple Methods
+
+Use `Router::ANY()` to handle all HTTP methods, or use `Router::MATCH()` with bitwise operators to handle specific combinations:
+
+<CodeGroup>
+
+```php Any Method
+// Handles GET, POST, PUT, DELETE, etc.
+Router::ANY('/contact', function() {
+    echo 'Contact page';
+});
+```
+
+```php Multiple Specific Methods
+// Handles only GET and POST
+Router::MATCH(
+    Router::GET | Router::POST,
+    '/form',
+    function() {
+        if (Router::$Method === 'GET') {
+            echo 'Display form';
+        } else {
+            echo 'Process form submission';
+        }
+    }
+);
+```
+
+</CodeGroup>
+
+## Accessing Request Information
+
+The Router class provides static properties for accessing request details:
+
+```php
+Router::GET('/info', function() {
+    // Get the current request path
+    echo 'Path: ' . Router::$Path . "\n";
+    
+    // Get the HTTP method
+    echo 'Method: ' . Router::$Method . "\n";
+    
+    // Get the method as a bitwise value
+    echo 'Method Bit: ' . Router::$MethodBit . "\n";
+});
+```
+
+<Tip>
+All route methods (`GET()`, `POST()`, etc.) automatically initialize the router if you haven't called `Router::init()` manually.
+</Tip>
+
+## Route Priority
+
+Routes are evaluated in the order they are defined. Once a route matches and executes (with `$Terminate = true`), no further routes are checked:
+
+```php
+// This route matches first for /admin
+Router::GET('/admin', function() {
+    echo 'Admin dashboard';
+});
+
+// This route will never be reached for /admin
+Router::GET('/admin', function() {
+    echo 'This will not execute';
+});
+```
+
+## Complete Example
+
+Here's a complete example showing multiple routes:
+
+```php
+<?php
+
+require_once '../vendor/autoload.php';
+
+use Perritu\Router\Router;
+
+// Initialize the router
+Router::init();
+
+// Homepage
+Router::GET('/', function() {
+    echo '<h1>Welcome to my site</h1>';
+});
+
+// About page
+Router::GET('/about', function() {
+    echo '<h1>About Us</h1>';
+});
+
+// Contact form - GET shows form, POST processes it
+Router::GET('/contact', function() {
+    echo '<form method="POST"><input name="email"><button>Send</button></form>';
+});
+
+Router::POST('/contact', function() {
+    echo 'Thank you for your message!';
+});
+
+// API endpoint that returns JSON
+Router::GET('/api/health', function() {
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'healthy']);
+});
+```
+
+## Next Steps
+
+- Learn about [Regex Patterns](/examples/regex-patterns) for dynamic routing
+- Explore [Class Callbacks](/examples/class-callbacks) for better code organization
+- Discover [Namespace Routing](/examples/namespace-routing) for advanced routing patterns

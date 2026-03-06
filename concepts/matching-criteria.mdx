@@ -1,0 +1,306 @@
+---
+title: Matching Criteria
+description: Learn how to define route patterns using static strings and regular expressions
+---
+
+The Router supports two primary matching strategies: **flat** (static string) matching and **regex** (regular expression) matching. Each strategy can be case-sensitive or case-insensitive.
+
+## Matching Mode Constants
+
+The Router uses bitwise flags to control how criteria are evaluated:
+
+```php
+public const CASE_I = 1; // 001 - Case insensitive flag
+public const FLAT   = 2; // 010 - Flat/static string matching
+public const PREG   = 4; // 100 - Regular expression matching
+public const IFLAT  = 3; // 011 - Case-insensitive flat matching
+public const IPREG  = 5; // 101 - Case-insensitive regex matching
+```
+
+<Info>
+**Bit Meaning**:
+- **First bit** (1): Case-insensitive when set
+- **Second bit** (2): Flat/static matching when set
+- **Third bit** (4): Regular expression matching when set
+</Info>
+
+## Criteria Format
+
+Criteria can be specified in two ways:
+
+1. **String**: Simple path string (defaults to case-insensitive flat matching)
+2. **Array**: `[pattern, flags]` where flags control the matching mode
+
+## Flat Matching (Static Strings)
+
+Flat matching compares the request path directly against a static string.
+
+### Simple Flat Matching
+
+```php
+// Case-insensitive by default
+Router::GET('/', function() {
+    echo 'Home page';
+});
+
+// Matches: /, but not /home or /index
+```
+
+### Case-Sensitive Flat Matching
+
+```php
+Router::GET(
+    ['/About', Router::FLAT],
+    function() {
+        echo 'About page';
+    }
+);
+
+// Matches: /About
+// Does NOT match: /about, /ABOUT
+```
+
+### Case-Insensitive Flat Matching
+
+```php
+Router::GET(
+    ['/about', Router::IFLAT],
+    function() {
+        echo 'About page';
+    }
+);
+
+// Matches: /about, /About, /ABOUT, /AbOuT
+```
+
+<Tip>
+When you provide a string criteria without an array, the router defaults to `Router::IFLAT` (case-insensitive flat matching). This is the most common use case.
+</Tip>
+
+## Regular Expression Matching
+
+Regex matching allows pattern-based routes with parameter extraction.
+
+### Basic Regex Pattern
+
+```php
+Router::GET(
+    ['\/users\/\d+', Router::PREG],
+    function() {
+        echo 'User profile';
+    }
+);
+
+// Matches: /users/1, /users/123, /users/9999
+// Does NOT match: /users/abc, /users/
+```
+
+<Warning>
+Remember to escape forward slashes (`\/`) in your regex patterns since they're used as regex delimiters internally.
+</Warning>
+
+### Capturing Parameters
+
+Use capturing groups to extract URL segments:
+
+```php
+Router::GET(
+    ['\/ticket\/(\d+)\/?', Router::PREG],
+    function(string $ticketId) {
+        echo "Viewing ticket #$ticketId";
+    }
+);
+
+// Request: /ticket/42
+// Callback receives: "42"
+```
+
+### Multiple Parameters
+
+```php
+Router::GET(
+    ['\/users\/(\d+)\/posts\/(\d+)', Router::PREG],
+    function(string $userId, string $postId) {
+        echo "User $userId, Post $postId";
+    }
+);
+
+// Request: /users/10/posts/55
+// Callback receives: "10", "55"
+```
+
+### Named Captures
+
+```php
+Router::GET(
+    ['\/blog\/([a-z0-9-]+)', Router::PREG],
+    function(string $slug) {
+        echo "Blog post: $slug";
+    }
+);
+
+// Request: /blog/my-first-post
+// Callback receives: "my-first-post"
+```
+
+### Case-Insensitive Regex
+
+```php
+Router::GET(
+    ['\/product\/(\w+)', Router::IPREG],
+    function(string $productName) {
+        echo "Product: $productName";
+    }
+);
+
+// Matches: /product/laptop, /Product/LAPTOP, /PRODUCT/mouse
+```
+
+The `IPREG` flag automatically adds the `(?i)` case-insensitive modifier to your pattern.
+
+## Using $CriteriaPrefix
+
+The `Router::$CriteriaPrefix` static property is prepended to all criteria before matching. This is useful for mounting the router in a subdirectory.
+
+```php
+Router::$CriteriaPrefix = '/api/v1';
+
+Router::GET('/users', function() {
+    echo 'User list';
+});
+
+// Actually matches: /api/v1/users
+```
+
+### Nested Prefixes
+
+You can change the prefix dynamically:
+
+```php
+Router::$CriteriaPrefix = '/admin';
+
+Router::GET('/dashboard', $dashboardHandler);
+Router::GET('/users', $usersHandler);
+
+Router::$CriteriaPrefix = '/public';
+
+Router::GET('/about', $aboutHandler);
+Router::GET('/contact', $contactHandler);
+
+// Matches:
+// /admin/dashboard
+// /admin/users
+// /public/about
+// /public/contact
+```
+
+<Info>
+The `$CriteriaPrefix` is applied **before** matching logic runs, so it works with both flat and regex patterns.
+</Info>
+
+## Complete Examples
+
+### REST API with Regex Parameters
+
+```php
+use Perritu\Router\Router;
+
+Router::init();
+
+// List all users
+Router::GET('/api/users', function() {
+    // Return user list
+});
+
+// Get specific user
+Router::GET(
+    ['\/api\/users\/(\d+)', Router::PREG],
+    function(string $id) {
+        // Return user with $id
+    }
+);
+
+// Update specific user
+Router::PUT(
+    ['\/api\/users\/(\d+)', Router::PREG],
+    function(string $id) {
+        // Update user with $id
+    }
+);
+
+// Delete specific user
+Router::DELETE(
+    ['\/api\/users\/(\d+)', Router::PREG],
+    function(string $id) {
+        // Delete user with $id
+    }
+);
+```
+
+### Static Pages with Flat Matching
+
+```php
+Router::GET('/', function() {
+    include 'pages/home.php';
+});
+
+Router::GET('/about', function() {
+    include 'pages/about.php';
+});
+
+Router::GET('/contact', function() {
+    include 'pages/contact.php';
+});
+
+// These all use default IFLAT matching
+```
+
+### Mixed Matching Strategies
+
+```php
+// Static route
+Router::GET('/dashboard', 'DashboardController@index');
+
+// Regex route with parameter
+Router::GET(
+    ['\/profile\/([a-zA-Z0-9_]+)', Router::PREG],
+    'ProfileController@show'
+);
+
+// Case-sensitive static route
+Router::GET(
+    ['/API/status', Router::FLAT],
+    'ApiController@status'
+);
+```
+
+## Matching Algorithm
+
+Here's how the router evaluates criteria:
+
+1. **Prefix Application**: `$CriteriaPrefix` is prepended to the criteria
+2. **Flag Detection**: Check if `FLAT` or `PREG` bit is set
+3. **Case Handling**: If `CASE_I` bit is set, convert strings to lowercase or add `(?i)` to regex
+4. **Matching**:
+   - **Flat**: Direct string comparison (`$criteria === $path`)
+   - **Regex**: Pattern matching (`preg_match("/$criteria/", $path, $matches)`)
+5. **Parameter Extraction**: Captured groups are passed to the callback
+6. **Dispatch**: If matched, execute the callback with extracted parameters
+
+## Best Practices
+
+<Tip>
+**Default to IFLAT for static routes**: The default case-insensitive flat matching works for most static pages and is the fastest matching mode.
+</Tip>
+
+<Tip>
+**Use PREG for dynamic segments**: When you need to extract IDs, slugs, or other dynamic parameters, use regex matching with capturing groups.
+</Tip>
+
+<Tip>
+**Be specific with regex patterns**: Use anchors and precise patterns to avoid unintended matches. For example, `\d+` for numeric IDs, `[a-z0-9-]+` for slugs.
+</Tip>
+
+<Warning>
+**Escape regex special characters**: Remember to escape characters like `/`, `.`, `?`, `+` in your patterns to match them literally.
+</Warning>

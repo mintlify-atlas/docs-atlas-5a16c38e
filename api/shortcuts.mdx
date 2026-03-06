@@ -1,0 +1,239 @@
+---
+title: "Method Shortcuts"
+description: "Convenient aliases for common HTTP methods"
+---
+
+## Overview
+
+The Router class provides convenient shortcut methods that are aliases to `Router::MATCH()`. These shortcuts make your code more readable by eliminating the need to specify the `$MethodBit` parameter.
+
+## Available Shortcuts
+
+All shortcuts follow the same signature:
+
+```php
+Router::{METHOD}(
+    string|array $Criteria,
+    callable|string|array $Callback,
+    bool $Terminate = true
+): mixed
+```
+
+Where `{METHOD}` is one of:
+
+- `ANY` - Match any HTTP method
+- `GET` - Match GET requests
+- `POST` - Match POST requests
+- `PUT` - Match PUT requests
+- `PATCH` - Match PATCH requests
+- `DELETE` - Match DELETE requests
+- `HEAD` - Match HEAD requests
+- `OPTIONS` - Match OPTIONS requests
+
+## Parameters
+
+<ParamField path="Criteria" type="string|array" required>
+  The criteria to match against the request path. Same as `Router::MATCH()`.
+  
+  - Simple string for exact path matching (case-insensitive by default)
+  - Array `[$pattern, $flags]` for advanced matching with flags
+</ParamField>
+
+<ParamField path="Callback" type="callable|string|array" required>
+  The callback to execute when the route matches.
+  
+  Supported formats:
+  - Anonymous function
+  - Array format: `[ClassName::class, 'methodName']`
+  - String format: `'Namespace\Class::method'` or `'Namespace/Class@method'`
+</ParamField>
+
+<ParamField path="Terminate" type="bool" default="true">
+  If `true`, PHP execution terminates after the callback is executed. Set to `false` to continue execution.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="return" type="mixed">
+  - If the route matches and `$Terminate` is `false`: returns the callback's return value
+  - If the route doesn't match: returns `null`
+  - If `$Terminate` is `true` (default): execution stops after the callback
+</ResponseField>
+
+## Examples
+
+### Router::GET()
+
+```php
+use Perritu\Router\Router;
+
+Router::init();
+
+// Simple GET route
+Router::GET('/', function() {
+    echo 'Home page';
+});
+
+// GET with parameters
+Router::GET(
+    ['\/user\/(\d+)\/?', Router::PREG],
+    function(string $userId) {
+        echo "User ID: {$userId}";
+    }
+);
+```
+
+### Router::POST()
+
+```php
+// Handle form submission
+Router::POST('/submit', function() {
+    $data = $_POST;
+    // Process form data
+    echo 'Form submitted';
+});
+
+// API endpoint
+Router::POST('/api/users', [UserController::class, 'create']);
+```
+
+### Router::PUT()
+
+```php
+// Update resource
+Router::PUT(
+    ['\/api\/users\/(\d+)\/?', Router::PREG],
+    function(string $userId) {
+        // Update user with ID $userId
+        echo "Updating user {$userId}";
+    }
+);
+```
+
+### Router::PATCH()
+
+```php
+// Partial update
+Router::PATCH('/api/users/123', function() {
+    // Apply partial update
+    echo 'User partially updated';
+});
+```
+
+### Router::DELETE()
+
+```php
+// Delete resource
+Router::DELETE(
+    ['\/api\/users\/(\d+)\/?', Router::PREG],
+    function(string $userId) {
+        // Delete user with ID $userId
+        echo "Deleting user {$userId}";
+    }
+);
+```
+
+### Router::HEAD()
+
+```php
+// Respond to HEAD requests
+Router::HEAD('/api/resource', function() {
+    // Return headers without body
+    header('X-Resource-Count: 42');
+});
+```
+
+### Router::OPTIONS()
+
+```php
+// Handle CORS preflight
+Router::OPTIONS('/api/*', function() {
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
+    header('Access-Control-Allow-Headers: Content-Type');
+});
+```
+
+### Router::ANY()
+
+```php
+// Respond to any HTTP method
+Router::ANY('/catch-all', function() {
+    echo 'This handles all HTTP methods';
+});
+
+// Useful for middleware-like functionality
+Router::ANY(
+    ['^/admin/', Router::PREG],
+    function() {
+        // Check authentication for all /admin routes
+        if (!isAuthenticated()) {
+            http_response_code(401);
+            exit('Unauthorized');
+        }
+    },
+    false  // Don't terminate, allow other routes to match
+);
+```
+
+## RESTful API Example
+
+```php
+use Perritu\Router\Router;
+
+Router::init();
+
+// List all users
+Router::GET('/api/users', [UserController::class, 'index']);
+
+// Get single user
+Router::GET(
+    ['\/api\/users\/(\d+)\/?', Router::PREG],
+    [UserController::class, 'show']
+);
+
+// Create new user
+Router::POST('/api/users', [UserController::class, 'create']);
+
+// Update user
+Router::PUT(
+    ['\/api\/users\/(\d+)\/?', Router::PREG],
+    [UserController::class, 'update']
+);
+
+// Partially update user
+Router::PATCH(
+    ['\/api\/users\/(\d+)\/?', Router::PREG],
+    [UserController::class, 'patch']
+);
+
+// Delete user
+Router::DELETE(
+    ['\/api\/users\/(\d+)\/?', Router::PREG],
+    [UserController::class, 'destroy']
+);
+```
+
+## Comparison with Router::MATCH()
+
+These shortcuts:
+
+```php
+Router::GET('/path', $callback);
+Router::POST('/path', $callback);
+```
+
+Are equivalent to:
+
+```php
+Router::MATCH(Router::GET, '/path', $callback);
+Router::MATCH(Router::POST, '/path', $callback);
+```
+
+The shortcuts simply call `Router::MATCH()` internally with the appropriate HTTP method constant.
+
+## Notes
+
+- All shortcuts accept the same parameters as `Router::MATCH()` except for `$MethodBit`
+- The method name corresponds to the HTTP method constant value
+- `Router::ANY()` matches all HTTP methods (equivalent to `Router::MATCH(Router::ANY, ...)`)
+- These methods are defined in Router.php:192-317

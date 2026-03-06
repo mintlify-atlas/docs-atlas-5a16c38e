@@ -1,0 +1,163 @@
+---
+title: Installation
+description: Install Perritu/Router via Composer or direct download
+---
+
+Perritu/Router offers two installation methods: using Composer (recommended) or direct download. Choose the method that best fits your project setup.
+
+## Requirements
+
+Before installing, ensure your environment meets these requirements:
+
+- PHP 8.1 or greater
+- A web server (Apache, Nginx, etc.)
+- URL rewriting capability
+
+<Steps>
+  <Step title="Choose Your Installation Method">
+    Select between Composer installation (recommended for most projects) or direct download (for projects without Composer).
+    
+    <CodeGroup>
+      ```bash Composer (Recommended)
+      composer require perritu/router
+      ```
+      
+      ```bash Direct Download
+      # Download Router.php from the repository
+      # Place it outside your publicly accessible directory
+      # For example: /var/www/include/perritu/router.php
+      ```
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Import the Router">
+    Depending on your installation method, import the router into your application.
+    
+    <CodeGroup>
+      ```php Composer Autoload
+      <?php
+      require_once __DIR__ . '/vendor/autoload.php';
+      
+      use Perritu\Router\Router;
+      ```
+      
+      ```php Direct Include
+      <?php
+      require_once __DIR__ . '/../include/perritu/router.php';
+      
+      use Perritu\Router\Router;
+      ```
+    </CodeGroup>
+    
+    <Note>
+      When using direct download, always place `Router.php` outside your publicly accessible directory for security.
+    </Note>
+  </Step>
+  
+  <Step title="Configure URL Rewriting">
+    Configure your web server to route all requests through your PHP entry point (typically `index.php`).
+    
+    <CodeGroup>
+      ```apache Apache (.htaccess)
+      RewriteEngine On
+      
+      # Redirect all requests to index.php
+      RewriteCond %{REQUEST_FILENAME} !-f
+      RewriteCond %{REQUEST_FILENAME} !-d
+      RewriteRule ^(.*)$ index.php [QSA,L]
+      ```
+      
+      ```nginx Nginx
+      server {
+          listen 80;
+          server_name example.com;
+          root /var/www/public;
+          index index.php;
+          
+          location / {
+              try_files $uri $uri/ /index.php?$query_string;
+          }
+          
+          location ~ \.php$ {
+              fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
+              fastcgi_index index.php;
+              fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+              include fastcgi_params;
+          }
+      }
+      ```
+    </CodeGroup>
+    
+    <Warning>
+      Without proper URL rewriting, only your root route will work. Make sure to test your configuration after setup.
+    </Warning>
+  </Step>
+  
+  <Step title="Verify Installation">
+    Create a simple test route to verify everything is working correctly.
+    
+    ```php index.php
+    <?php
+    require_once __DIR__ . '/vendor/autoload.php';
+    
+    use Perritu\Router\Router;
+    
+    Router::GET('/', function() {
+        echo 'Router is working!';
+    });
+    ```
+    
+    Visit your application in a browser. You should see "Router is working!" displayed.
+  </Step>
+</Steps>
+
+## Project Structure
+
+Here's a recommended project structure for applications using Perritu/Router:
+
+```
+project/
+├── public/
+│   ├── index.php          # Entry point
+│   ├── .htaccess          # Apache rewrite rules
+│   └── assets/            # CSS, JS, images
+├── src/
+│   ├── Controllers/       # Your controller classes
+│   └── Routes/            # Route definition files
+├── vendor/                # Composer dependencies
+└── composer.json
+```
+
+<Note>
+  The `public/` directory should be your web server's document root, keeping application code outside the publicly accessible area.
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="404 errors on all routes except root">
+    This usually indicates URL rewriting is not configured correctly. Check:
+    - Apache: Ensure `mod_rewrite` is enabled
+    - Nginx: Verify your `try_files` directive is correct
+    - Confirm your web server is reading the configuration file
+  </Accordion>
+  
+  <Accordion title="Class not found errors">
+    If you see "Class not found" errors:
+    - Composer users: Run `composer dump-autoload`
+    - Direct download: Verify the path in your `require_once` statement
+    - Check that you have the correct `use` statement
+  </Accordion>
+  
+  <Accordion title="PHP version errors">
+    Perritu/Router requires PHP 8.1+. Check your PHP version:
+    ```bash
+    php -v
+    ```
+    If you have multiple PHP versions, ensure your web server uses 8.1 or higher.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Now that you have Perritu/Router installed, continue to the [Quickstart](/quickstart) guide to build your first routes.

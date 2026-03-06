@@ -1,0 +1,213 @@
+---
+title: "Router::MATCH()"
+description: "Match routes with custom HTTP method combinations"
+---
+
+## Description
+
+```php
+public static function MATCH(
+    int $MethodBit,
+    string|array $Criteria,
+    callable|string|array $Callback,
+    bool $Terminate = true
+): mixed
+```
+
+Launches the defined callback if the given criteria matches the current request. This is the core routing method that powers all the shortcut methods.
+
+## Parameters
+
+<ParamField path="MethodBit" type="int" required>
+  Bitwise representation of the desired HTTP methods to be handled. Use the Router class constants (`Router::GET`, `Router::POST`, etc.) and combine them with the bitwise OR operator (`|`).
+  
+  Examples:
+  - `Router::GET` - Match only GET requests
+  - `Router::GET | Router::POST` - Match GET or POST requests
+  - `Router::ANY` - Match any HTTP method
+</ParamField>
+
+<ParamField path="Criteria" type="string|array" required>
+  The criteria to match against the request path.
+  
+  Can be:
+  - A simple string for exact path matching (case-insensitive by default)
+  - An array `[$pattern, $flags]` where:
+    - `$pattern` is the matching pattern (string or regex)
+    - `$flags` is a bitwise combination of matching flags:
+      - `Router::FLAT` - Exact string match (case-sensitive)
+      - `Router::CASE_I` - Case-insensitive flag
+      - `Router::PREG` - Use regular expression matching
+      - `Router::IFLAT` - Case-insensitive flat match (default)
+      - `Router::IPREG` - Case-insensitive regex match
+</ParamField>
+
+<ParamField path="Callback" type="callable|string|array" required>
+  The callback to execute when the route matches.
+  
+  Supported formats:
+  - Anonymous function: `function() { ... }`
+  - Array format: `[ClassName::class, 'methodName']`
+  - String with `::`: `'Namespace\Class::method'`
+  - String with `@`: `'Namespace/Class@method'`
+  
+  When using string format:
+  - The class must exist and be accessible
+  - The method must exist and be public
+  - Class will be instantiated automatically
+</ParamField>
+
+<ParamField path="Terminate" type="bool" default="true">
+  If `true`, PHP execution terminates after the callback is executed using `exit()`. Set to `false` to continue execution and return the callback's return value.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="return" type="mixed">
+  - If the route matches and `$Terminate` is `false`: returns the callback's return value
+  - If the route doesn't match: returns `null`
+  - If `$Terminate` is `true` (default): execution stops after the callback
+</ResponseField>
+
+## Exceptions
+
+Throws `\Exception` when using a string callback if:
+- The specified class does not exist
+- The specified method does not exist in the class
+- The method is not public
+
+## Examples
+
+### Match Multiple HTTP Methods
+
+```php
+use Perritu\Router\Router;
+
+Router::init();
+
+// Handle both GET and POST requests to the home page
+Router::MATCH(
+    Router::GET | Router::POST,
+    '/',
+    function() {
+        echo 'Hello, World!';
+    }
+);
+```
+
+### Match Any HTTP Method
+
+```php
+// Respond to any HTTP method
+Router::MATCH(
+    Router::ANY,
+    '/api/status',
+    function() {
+        echo json_encode(['status' => 'ok']);
+    }
+);
+```
+
+### Using Regular Expressions
+
+```php
+// Match /ticket/123, /ticket/456, etc.
+Router::MATCH(
+    Router::GET,
+    ['\/ticket\/(\d+)\/?', Router::PREG],
+    function(string $ticketId) {
+        echo "Viewing ticket #{$ticketId}";
+    }
+);
+```
+
+When using regex patterns with capturing groups, the captured values are passed as parameters to the callback function.
+
+### Case-Sensitive Matching
+
+```php
+// Match exactly '/API' (case-sensitive)
+Router::MATCH(
+    Router::GET,
+    ['/API', Router::FLAT],
+    function() {
+        echo 'API endpoint';
+    }
+);
+```
+
+### Using Class Methods as Callbacks
+
+```php
+// Array format
+Router::MATCH(
+    Router::GET,
+    '/users',
+    [UserController::class, 'index']
+);
+
+// String with :: separator
+Router::MATCH(
+    Router::GET,
+    '/users',
+    'App\Controllers\UserController::index'
+);
+
+// String with @ separator
+Router::MATCH(
+    Router::GET,
+    '/users',
+    'App/Controllers/UserController@index'
+);
+```
+
+### Continue Execution After Route
+
+```php
+// Don't terminate after callback
+$result = Router::MATCH(
+    Router::GET,
+    '/api/data',
+    function() {
+        return ['data' => 'example'];
+    },
+    false  // Don't terminate
+);
+
+// $result now contains the callback's return value
+if ($result !== null) {
+    // Route matched
+    header('Content-Type: application/json');
+    echo json_encode($result);
+}
+```
+
+### Complex Regex Pattern
+
+```php
+// Match /user/john/profile or /user/jane/settings
+Router::MATCH(
+    Router::GET,
+    ['\/user\/([a-z]+)\/([a-z]+)\/?', Router::IPREG],
+    function(string $username, string $action) {
+        echo "User: {$username}, Action: {$action}";
+    }
+);
+```
+
+## Matching Flags Reference
+
+| Flag | Value | Description |
+|------|-------|-------------|
+| `Router::CASE_I` | 1 | Case-insensitive matching |
+| `Router::FLAT` | 2 | Exact string matching |
+| `Router::PREG` | 4 | Regular expression matching |
+| `Router::IFLAT` | 3 | Case-insensitive exact match (default) |
+| `Router::IPREG` | 5 | Case-insensitive regex match |
+
+## Notes
+
+- If `Router::init()` hasn't been called, it will be called automatically with default values
+- The `$CriteriaPrefix` static property is prepended to all criteria before matching
+- When `$Terminate` is true (default), the script exits after the callback runs
+- Regex patterns should not include delimiters - they are added automatically

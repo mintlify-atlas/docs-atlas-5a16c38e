@@ -1,0 +1,129 @@
+---
+title: "Router::init()"
+description: "Initialize the router context with request information"
+---
+
+## Description
+
+```php
+public static function init(
+    ?string $Path = null,
+    ?string $Method = null,
+    ?string $Host = null,
+    ?int $Port = null
+): string
+```
+
+Initializes the router context with the current request information. This method must be called before using any routing methods, or it will be called automatically with default values.
+
+You can also use the object-oriented approach with `new Router()` constructor, which accepts the same parameters.
+
+## Parameters
+
+<ParamField path="Path" type="?string" default="$_SERVER['REQUEST_URI']">
+  The request path to be used by the router. If not provided, uses the current request URI from `$_SERVER['REQUEST_URI']`.
+</ParamField>
+
+<ParamField path="Method" type="?string" default="$_SERVER['REQUEST_METHOD']">
+  The HTTP method to be used by the router. If not provided, uses the current request method from `$_SERVER['REQUEST_METHOD']`.
+  
+  Valid values are: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`.
+</ParamField>
+
+<ParamField path="Host" type="?string" default="$_SERVER['HTTP_HOST']">
+  The host name for the request. If not provided, uses `$_SERVER['HTTP_HOST']`.
+</ParamField>
+
+<ParamField path="Port" type="?int" default="$_SERVER['SERVER_PORT']">
+  The port number for the request. If not provided, uses `$_SERVER['SERVER_PORT']`.
+</ParamField>
+
+## Return Value
+
+<ResponseField name="return" type="string">
+  Returns the class name as a string (`Perritu\Router\Router`), allowing for method chaining.
+</ResponseField>
+
+When using the `__construct()` method instead, it returns the class instance itself.
+
+## Exceptions
+
+Throws `\Exception` if:
+- The `$Method` parameter is not a valid HTTP verb
+- The request data cannot be parsed correctly
+
+## Examples
+
+### Basic Initialization
+
+```php
+use Perritu\Router\Router;
+
+// Initialize with default values from $_SERVER
+Router::init();
+
+// Now you can use routing methods
+Router::GET('/', function() {
+    echo 'Hello, World!';
+});
+```
+
+### Override Request Path
+
+```php
+// Override the path without affecting the method
+Router::init('/api/v1/users');
+
+// The router will use '/api/v1/users' as the request path
+// but still use the actual HTTP method from $_SERVER
+```
+
+### Override Request Method
+
+```php
+// Override the method without affecting the path
+Router::init(null, 'POST');
+
+// Useful for testing or simulating different request types
+```
+
+### Override Multiple Parameters
+
+```php
+// Override both path and method
+Router::init('/custom/path', 'PUT');
+
+// Override all parameters for complete control
+Router::init(
+    '/api/endpoint',
+    'POST',
+    'example.com',
+    8080
+);
+```
+
+### Using the Constructor
+
+```php
+// Object-oriented approach
+$router = new Router();
+
+// Or with custom parameters
+$router = new Router('/api/v1/users', 'GET');
+```
+
+### Method Chaining
+
+```php
+// Since init() returns the class name, you can chain methods
+Router::init()::GET('/', function() {
+    echo 'Home page';
+});
+```
+
+## Notes
+
+- If you don't call `init()` explicitly, it will be called automatically with default values when you use any routing method
+- The path is automatically normalized to remove duplicate slashes and resolve relative path segments
+- The method is converted to uppercase internally
+- The `$MethodBit` static property is set based on the provided method for use in bitwise operations

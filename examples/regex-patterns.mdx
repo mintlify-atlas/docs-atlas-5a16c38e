@@ -1,0 +1,322 @@
+---
+title: Regex Patterns
+description: Use regular expressions for dynamic routing with parameter extraction
+---
+
+## Overview
+
+Perritu/Router supports PCRE-based dynamic routing, allowing you to capture parts of the URL as parameters. This is perfect for building RESTful APIs and handling dynamic content.
+
+## Basic Regex Route
+
+To use regex patterns, pass an array with the pattern and the `Router::PREG` flag:
+
+```php
+use Perritu\Router\Router;
+
+Router::init();
+
+// Match /user/123, /user/456, etc.
+Router::GET(
+    ['/user/(\d+)', Router::PREG],
+    function($userId) {
+        echo "User ID: $userId";
+    }
+);
+```
+
+<Note>
+Captured groups from the regex become parameters to your callback function. The first captured group becomes the first parameter, and so on.
+</Note>
+
+## Pattern Flags
+
+The Router provides several flags for pattern matching:
+
+| Flag | Description |
+|------|-------------|
+| `Router::FLAT` | Exact string match (default, case-sensitive) |
+| `Router::IFLAT` | Exact string match (case-insensitive) |
+| `Router::PREG` | Regex pattern match (case-sensitive) |
+| `Router::IPREG` | Regex pattern match (case-insensitive) |
+
+<CodeGroup>
+
+```php Case-Sensitive Regex
+// Matches /ticket/123 but not /Ticket/123
+Router::GET(
+    ['/ticket/(\d+)', Router::PREG],
+    function($ticketId) {
+        echo "Ticket #$ticketId";
+    }
+);
+```
+
+```php Case-Insensitive Regex
+// Matches /ticket/123, /Ticket/123, /TICKET/123
+Router::GET(
+    ['/ticket/(\d+)', Router::IPREG],
+    function($ticketId) {
+        echo "Ticket #$ticketId";
+    }
+);
+```
+
+</CodeGroup>
+
+## Common Patterns
+
+Here are some commonly used regex patterns:
+
+### Numeric IDs
+
+```php
+// Match numeric IDs: /user/123
+Router::GET(
+    ['/user/(\d+)', Router::PREG],
+    function($id) {
+        echo "Loading user $id";
+    }
+);
+```
+
+### Slugs and Identifiers
+
+```php
+// Match alphanumeric slugs with hyphens: /post/my-first-post
+Router::GET(
+    ['/post/([\w-]+)', Router::PREG],
+    function($slug) {
+        echo "Loading post: $slug";
+    }
+);
+```
+
+### Optional Segments
+
+```php
+// Match /page/about or /page/about/
+Router::GET(
+    ['/page/([\w-]+)/?', Router::PREG],
+    function($page) {
+        echo "Page: $page";
+    }
+);
+```
+
+### Multiple Parameters
+
+```php
+// Match /blog/2024/03/my-post
+Router::GET(
+    ['/blog/(\d{4})/(\d{2})/([\w-]+)', Router::PREG],
+    function($year, $month, $slug) {
+        echo "Post: $slug from $month/$year";
+    }
+);
+```
+
+## RESTful API Examples
+
+Here's a complete RESTful API example using regex patterns:
+
+```php
+<?php
+
+use Perritu\Router\Router;
+
+Router::init();
+
+// List all resources
+Router::GET('/api/users', function() {
+    echo json_encode(['users' => ['Alice', 'Bob', 'Charlie']]);
+});
+
+// Get a specific resource
+Router::GET(
+    ['/api/users/(\d+)', Router::PREG],
+    function($userId) {
+        echo json_encode(['id' => $userId, 'name' => 'User ' . $userId]);
+    }
+);
+
+// Update a resource
+Router::PUT(
+    ['/api/users/(\d+)', Router::PREG],
+    function($userId) {
+        echo json_encode(['message' => "User $userId updated"]);
+    }
+);
+
+// Delete a resource
+Router::DELETE(
+    ['/api/users/(\d+)', Router::PREG],
+    function($userId) {
+        echo json_encode(['message' => "User $userId deleted"]);
+    }
+);
+```
+
+## Advanced Patterns
+
+### UUID Support
+
+```php
+// Match UUIDs: /resource/550e8400-e29b-41d4-a716-446655440000
+Router::GET(
+    ['/resource/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})', Router::IPREG],
+    function($uuid) {
+        echo "Resource UUID: $uuid";
+    }
+);
+```
+
+### File Extensions
+
+```php
+// Match files with extensions: /download/document.pdf
+Router::GET(
+    ['/download/([\w-]+)\.(pdf|docx|txt)', Router::PREG],
+    function($filename, $extension) {
+        echo "Downloading $filename.$extension";
+    }
+);
+```
+
+### Category and Subcategory
+
+```php
+// Match /shop/electronics/laptops
+Router::GET(
+    ['/shop/([\w-]+)/([\w-]+)', Router::PREG],
+    function($category, $subcategory) {
+        echo "Category: $category, Subcategory: $subcategory";
+    }
+);
+```
+
+## Parameter Type Hinting
+
+You can use PHP type hints in your callback parameters:
+
+```php
+Router::GET(
+    ['/user/(\d+)', Router::PREG],
+    function(int $userId) {
+        // $userId is automatically cast to int
+        echo "User ID: " . ($userId + 1);
+    }
+);
+```
+
+<Tip>
+Use type hints in your callback functions to ensure captured parameters are automatically cast to the correct type.
+</Tip>
+
+## Working with Query Strings
+
+Regex patterns match the path only. Query strings can be accessed via `$_GET`:
+
+```php
+// Matches /search?q=test&page=2
+Router::GET(
+    ['/search', Router::FLAT],
+    function() {
+        $query = $_GET['q'] ?? '';
+        $page = $_GET['page'] ?? 1;
+        echo "Searching for: $query (page $page)";
+    }
+);
+```
+
+## Best Practices
+
+<Tip>
+**Order Your Routes Carefully**
+
+Place more specific routes before generic ones:
+
+```php
+// Good: Specific route first
+Router::GET('/user/profile', function() {
+    echo 'User profile';
+});
+
+Router::GET(
+    ['/user/([\w-]+)', Router::PREG],
+    function($username) {
+        echo "User: $username";
+    }
+);
+
+// Bad: Generic route would catch /user/profile
+// Router::GET(['/user/([\w-]+)', Router::PREG], ...);
+// Router::GET('/user/profile', ...); // Never reached!
+```
+</Tip>
+
+<Note>
+**Escape Special Characters**
+
+Remember to escape regex special characters:
+- Use `\/` to match a literal forward slash
+- Use `\.` to match a literal period
+- Use `\(` and `\)` to match literal parentheses
+</Note>
+
+## Complete Example
+
+Here's a complete blog application using regex patterns:
+
+```php
+<?php
+
+require_once '../vendor/autoload.php';
+
+use Perritu\Router\Router;
+
+Router::init();
+
+// Blog homepage
+Router::GET('/', function() {
+    echo '<h1>My Blog</h1>';
+});
+
+// View post by slug
+Router::GET(
+    ['/post/([\w-]+)', Router::PREG],
+    function($slug) {
+        echo "<h1>Post: $slug</h1>";
+    }
+);
+
+// View posts by year and month
+Router::GET(
+    ['/archive/(\d{4})/(\d{2})', Router::PREG],
+    function($year, $month) {
+        echo "<h1>Archive: $month/$year</h1>";
+    }
+);
+
+// View posts by category
+Router::GET(
+    ['/category/([\w-]+)', Router::PREG],
+    function($category) {
+        echo "<h1>Category: $category</h1>";
+    }
+);
+
+// View author profile
+Router::GET(
+    ['/author/([\w-]+)', Router::PREG],
+    function($username) {
+        echo "<h1>Author: $username</h1>";
+    }
+);
+```
+
+## Next Steps
+
+- Learn about [Class Callbacks](/examples/class-callbacks) for organizing route handlers
+- Explore [Namespace Routing](/examples/namespace-routing) for automatic route resolution
+- Review [Matching Criteria](/concepts/matching-criteria) for route prefixes using $CriteriaPrefix

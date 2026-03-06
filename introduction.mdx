@@ -1,0 +1,67 @@
+---
+title: Introduction
+description: A lightweight, simple, yet blazing fast PHP router for modern web applications
+---
+
+## What is Perritu/Router?
+
+Perritu/Router is a lightweight, simple, yet blazing fast PHP router designed to simplify the process of handling incoming HTTP requests and directing them to your application code. It provides an elegant API for defining routes without the overhead of a full framework.
+
+Whether you're building a simple website, a REST API, or a complex web application, Perritu/Router gives you the flexibility and performance you need with minimal configuration.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Multiple HTTP Methods" icon="network-wired">
+    Full support for `DELETE`, `GET`, `HEAD`, `OPTIONS`, `PATCH`, `POST`, and `PUT` request methods
+  </Card>
+  
+  <Card title="Routing Shortcuts" icon="bolt">
+    Convenient method shortcuts like `Router::GET()`, `Router::POST()`, etc. for quick route definition
+  </Card>
+  
+  <Card title="Static & Dynamic Routing" icon="route">
+    Define both static routes and dynamic PCRE-based patterns with parameter extraction
+  </Card>
+  
+  <Card title="Flexible Callbacks" icon="code">
+    Use closures, class methods with `Path\to\Class::method` syntax, or callable arrays
+  </Card>
+  
+  <Card title="Subrouting" icon="sitemap">
+    Organize routes with prefixes and group related routes together
+  </Card>
+  
+  <Card title="Namespace Mapping" icon="folder-tree">
+    Map URL paths to namespaces for automatic class-based routing
+  </Card>
+</CardGroup>
+
+## Why Choose Perritu/Router?
+
+- **Lightweight**: Single file implementation with zero dependencies
+- **Blazing Fast**: Optimized for performance with minimal overhead
+- **Flexible Installation**: Works with or without Composer
+- **Modern PHP**: Built for PHP 8.1+ with modern language features
+- **Case Insensitive Matching**: Optional case-insensitive route matching
+- **Custom Overrides**: Override path and HTTP method for testing
+
+## Requirements
+
+<Note>
+  Perritu/Router requires **PHP 8.1 or greater** and a URL rewriting mechanism (like Apache's mod_rewrite or Nginx rewrite rules).
+</Note>
+
+The router can run out-of-the-box without any additional dependencies. While Composer is the recommended installation method, you can also use it as a standalone file.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Get started by installing Perritu/Router via Composer or direct download
+  </Card>
+  
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Build your first route in under 5 minutes with our quickstart guide
+  </Card>
+</CardGroup>

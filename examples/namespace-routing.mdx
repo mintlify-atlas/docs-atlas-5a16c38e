@@ -1,0 +1,485 @@
+---
+title: Namespace Routing
+description: Automatically map namespaces to routes using Router::USE()
+---
+
+## Overview
+
+Namespace routing allows you to map entire namespaces to URL paths automatically. This powerful feature eliminates the need to define routes for every controller method, making your code cleaner and more maintainable.
+
+## How It Works
+
+`Router::USE()` maps a namespace to a mount point. The Router then:
+
+1. Takes the request path after the mount point
+2. Looks for a class in the namespace that matches the path
+3. Calls a method on that class matching the HTTP method (GET, POST, etc.)
+
+```php
+use Perritu\Router\Router;
+
+Router::init();
+
+// Mount the App\Api namespace at /api
+Router::USE('App\\Api', '/api');
+
+// Now requests automatically map:
+// GET  /api/Users  →  App\Api\Users::GET()
+// POST /api/Users  →  App\Api\Users::POST()
+// GET  /api/Orders →  App\Api\Orders::GET()
+```
+
+## Basic Example
+
+First, create your controller classes:
+
+```php
+<?php
+// File: src/Api/Users.php
+
+namespace App\Api;
+
+class Users
+{
+    public function GET()
+    {
+        // Handles GET /api/Users
+        echo json_encode(['users' => ['Alice', 'Bob', 'Charlie']]);
+    }
+    
+    public function POST()
+    {
+        // Handles POST /api/Users
+        echo json_encode(['message' => 'User created']);
+    }
+}
+```
+
+```php
+<?php
+// File: src/Api/Orders.php
+
+namespace App\Api;
+
+class Orders
+{
+    public function GET()
+    {
+        // Handles GET /api/Orders
+        echo json_encode(['orders' => []]);
+    }
+}
+```
+
+Then set up the namespace routing:
+
+```php
+<?php
+// File: public/index.php
+
+require_once '../vendor/autoload.php';
+
+use Perritu\Router\Router;
+
+Router::init();
+
+// Mount the namespace
+Router::USE('App\\Api', '/api');
+```
+
+<Note>
+The method name in your class must match the HTTP method in uppercase: `GET()`, `POST()`, `PUT()`, `DELETE()`, etc.
+</Note>
+
+## Method Mapping
+
+HTTP methods map directly to class methods:
+
+| HTTP Method | Class Method |
+|-------------|-------------|
+| GET | `GET()` |
+| POST | `POST()` |
+| PUT | `PUT()` |
+| PATCH | `PATCH()` |
+| DELETE | `DELETE()` |
+| HEAD | `HEAD()` |
+| OPTIONS | `OPTIONS()` |
+
+```php
+namespace App\Api;
+
+class Articles
+{
+    public function GET()
+    {
+        // Handles GET /api/Articles
+        echo 'List articles';
+    }
+    
+    public function POST()
+    {
+        // Handles POST /api/Articles
+        echo 'Create article';
+    }
+    
+    public function PUT()
+    {
+        // Handles PUT /api/Articles
+        echo 'Update article';
+    }
+    
+    public function DELETE()
+    {
+        // Handles DELETE /api/Articles
+        echo 'Delete article';
+    }
+}
+```
+
+## Restricting HTTP Methods
+
+By default, `Router::USE()` handles all HTTP methods. You can restrict which methods are handled:
+
+```php
+// Only handle GET requests
+Router::USE('App\\Api', '/api', Router::GET);
+
+// Handle GET and POST only
+Router::USE('App\\Api', '/api', Router::GET | Router::POST);
+
+// Handle all methods except GET
+Router::USE('App\\Api', '/api', Router::ANY & ~Router::GET);
+```
+
+## Directory Structure Mapping
+
+The namespace structure maps to the URL path:
+
+```
+src/
+└── Api/
+    ├── Users.php          → /api/Users
+    ├── Orders.php         → /api/Orders
+    └── Products/
+        ├── Categories.php → /api/Products/Categories
+        └── Items.php      → /api/Products/Items
+```
+
+```php
+<?php
+// File: src/Api/Products/Categories.php
+
+namespace App\Api\Products;
+
+class Categories
+{
+    public function GET()
+    {
+        // Handles GET /api/Products/Categories
+        echo json_encode(['categories' => ['Electronics', 'Books']]);
+    }
+}
+```
+
+```php
+// Mount the namespace
+Router::USE('App\\Api', '/api');
+
+// These now work automatically:
+// GET /api/Users
+// GET /api/Orders
+// GET /api/Products/Categories
+// GET /api/Products/Items
+```
+
+## Complete RESTful API Example
+
+Here's a complete API using namespace routing:
+
+```php
+<?php
+// File: src/Api/v1/Users.php
+
+namespace App\Api\v1;
+
+class Users
+{
+    public function GET()
+    {
+        // GET /api/v1/Users - List all users
+        header('Content-Type: application/json');
+        
+        $users = [
+            ['id' => 1, 'name' => 'Alice', 'email' => 'alice@example.com'],
+            ['id' => 2, 'name' => 'Bob', 'email' => 'bob@example.com'],
+        ];
+        
+        echo json_encode(['data' => $users]);
+    }
+    
+    public function POST()
+    {
+        // POST /api/v1/Users - Create new user
+        header('Content-Type: application/json');
+        
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        echo json_encode([
+            'message' => 'User created',
+            'data' => ['id' => 123, 'name' => $data['name'] ?? 'Unknown']
+        ]);
+    }
+    
+    public function DELETE()
+    {
+        // DELETE /api/v1/Users - Delete user
+        header('Content-Type: application/json');
+        
+        echo json_encode(['message' => 'User deleted']);
+    }
+}
+```
+
+```php
+<?php
+// File: src/Api/v1/Posts.php
+
+namespace App\Api\v1;
+
+class Posts
+{
+    public function GET()
+    {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'data' => [
+                ['id' => 1, 'title' => 'First Post'],
+                ['id' => 2, 'title' => 'Second Post']
+            ]
+        ]);
+    }
+    
+    public function POST()
+    {
+        header('Content-Type: application/json');
+        echo json_encode(['message' => 'Post created']);
+    }
+}
+```
+
+```php
+<?php
+// File: public/index.php
+
+require_once '../vendor/autoload.php';
+
+use Perritu\Router\Router;
+
+Router::init();
+
+// Mount API v1
+Router::USE('App\\Api\\v1', '/api/v1');
+
+// All these routes now work automatically:
+// GET    /api/v1/Users  → App\Api\v1\Users::GET()
+// POST   /api/v1/Users  → App\Api\v1\Users::POST()
+// DELETE /api/v1/Users  → App\Api\v1\Users::DELETE()
+// GET    /api/v1/Posts  → App\Api\v1\Posts::GET()
+// POST   /api/v1/Posts  → App\Api\v1\Posts::POST()
+```
+
+## Controlling Termination
+
+By default, execution terminates after a successful match. You can continue execution by setting `$Terminate` to `false`:
+
+```php
+// Continue execution after handling the request
+Router::USE('App\\Api', '/api', Router::ANY, false);
+
+// You can now add logging or other post-processing
+echo "\n<!-- Request handled at " . date('Y-m-d H:i:s') . " -->";
+```
+
+## Combining with Regular Routes
+
+You can mix namespace routing with regular routes:
+
+```php
+use Perritu\Router\Router;
+
+Router::init();
+
+// Regular routes for web pages
+Router::GET('/', function() {
+    echo '<h1>Homepage</h1>';
+});
+
+Router::GET('/about', function() {
+    echo '<h1>About</h1>';
+});
+
+// Namespace routing for API
+Router::USE('App\\Api', '/api');
+
+// More regular routes
+Router::GET('/contact', function() {
+    echo '<h1>Contact</h1>';
+});
+```
+
+## Error Handling
+
+Unlike `Router::MATCH()`, `Router::USE()` does not throw exceptions. If a class or method is not found, the route simply doesn't match and execution continues:
+
+```php
+Router::USE('App\\Api', '/api');
+
+// If App\Api\NonExistent doesn't exist,
+// GET /api/NonExistent will not match and execution continues
+
+// Add a fallback for unmatched API routes
+Router::ANY(['/api/.*', Router::PREG], function() {
+    http_response_code(404);
+    echo json_encode(['error' => 'Endpoint not found']);
+});
+```
+
+<Tip>
+Add fallback routes after `Router::USE()` to handle requests that don't match any class in your namespace.
+</Tip>
+
+## Multiple Namespaces
+
+You can mount multiple namespaces at different mount points:
+
+```php
+Router::init();
+
+// API v1
+Router::USE('App\\Api\\v1', '/api/v1');
+
+// API v2
+Router::USE('App\\Api\\v2', '/api/v2');
+
+// Admin panel
+Router::USE('App\\Admin', '/admin');
+
+// Public pages
+Router::USE('App\\Pages', '/pages');
+```
+
+## Best Practices
+
+<Tip>
+**Use Consistent Naming**
+
+Name your classes to match the resource they represent:
+- `Users` class for user resources
+- `Orders` class for order resources
+- `Products` class for product resources
+</Tip>
+
+<Tip>
+**Version Your APIs**
+
+Use namespace versioning for APIs:
+```php
+Router::USE('App\\Api\\v1', '/api/v1');
+Router::USE('App\\Api\\v2', '/api/v2');
+```
+</Tip>
+
+<Note>
+**Method Visibility**
+
+Only public methods can be called. The HTTP method names (`GET`, `POST`, etc.) must be public:
+
+```php
+class Users
+{
+    // ✅ Works
+    public function GET() { }
+    
+    // ❌ Doesn't work - not public
+    protected function POST() { }
+}
+```
+</Note>
+
+## Complete Application Example
+
+Here's a complete application structure using namespace routing:
+
+```php
+<?php
+// File: src/Api/Health.php
+namespace App\Api;
+
+class Health
+{
+    public function GET()
+    {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'healthy', 'timestamp' => time()]);
+    }
+}
+
+// File: src/Api/Auth.php
+namespace App\Api;
+
+class Auth
+{
+    public function POST()
+    {
+        header('Content-Type: application/json');
+        $data = json_decode(file_get_contents('php://input'), true);
+        echo json_encode(['token' => 'example-jwt-token']);
+    }
+}
+
+// File: src/Admin/Dashboard.php
+namespace App\Admin;
+
+class Dashboard
+{
+    public function GET()
+    {
+        echo '<h1>Admin Dashboard</h1>';
+    }
+}
+
+// File: public/index.php
+require_once '../vendor/autoload.php';
+
+use Perritu\Router\Router;
+
+Router::init();
+
+// Homepage
+Router::GET('/', function() {
+    echo '<h1>Welcome</h1>';
+});
+
+// API namespace
+Router::USE('App\\Api', '/api');
+// Now handles:
+// GET  /api/Health → App\Api\Health::GET()
+// POST /api/Auth   → App\Api\Auth::POST()
+
+// Admin namespace  
+Router::USE('App\\Admin', '/admin');
+// Now handles:
+// GET /admin/Dashboard → App\Admin\Dashboard::GET()
+
+// 404 fallback
+Router::ANY(['.*', Router::PREG], function() {
+    http_response_code(404);
+    echo '<h1>404 Not Found</h1>';
+});
+```
+
+## Next Steps
+
+- Review [Matching Criteria](/concepts/matching-criteria) for route prefixes using $CriteriaPrefix
+- Learn about [Callbacks](/concepts/callbacks) for flexible request handling
+- Explore the [Router::USE()](/api/use) API reference for advanced namespace mounting

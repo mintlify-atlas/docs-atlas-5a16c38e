@@ -1,0 +1,180 @@
+---
+title: "Router Class"
+description: "Complete reference for the Perritu Router class"
+---
+
+## Introduction
+
+The `Router` class simplifies the process of handling incoming requests and directing them to developer-defined code flows. It provides a powerful routing system with support for multiple HTTP methods, regular expressions, and namespace-based routing.
+
+## Class Synopsis
+
+```php
+namespace Perritu\Router;
+
+class Router {
+  /* HTTP Method Constants */
+  public const DELETE  = 1;   // Bit 1
+  public const GET     = 2;   // Bit 2
+  public const HEAD    = 4;   // Bit 3
+  public const OPTIONS = 8;   // Bit 4
+  public const PATCH   = 16;  // Bit 5
+  public const POST    = 32;  // Bit 6
+  public const PUT     = 64;  // Bit 7
+  public const ANY     = 127; // All methods (bits 1-7)
+
+  /* Matching Flags */
+  public const CASE_I = 1; // Case-insensitive (001)
+  public const FLAT   = 2; // Flat string match (010)
+  public const PREG   = 4; // Regular expression (100)
+  public const IFLAT  = 3; // Case-insensitive flat (011)
+  public const IPREG  = 5; // Case-insensitive regex (101)
+
+  /* Properties */
+  public static ?string $Path = null;
+  public static ?string $Method = null;
+  public static int $MethodBit = 0;
+  public static string $CriteriaPrefix = '';
+  public static string $ClassPrefix = '';
+
+  /* Methods */
+  public function __construct(
+    ?string $Path = null,
+    ?string $Method = null,
+    ?string $Host = null,
+    ?int $Port = null
+  );
+  
+  public static function init(
+    ?string $Path = null,
+    ?string $Method = null,
+    ?string $Host = null,
+    ?int $Port = null
+  ): string;
+  
+  public static function MATCH(
+    int $MethodBit,
+    string|array $Criteria,
+    callable|string|array $Callback,
+    bool $Terminate = true
+  ): mixed;
+  
+  public static function GET(
+    string|array $Criteria,
+    callable|string|array $Callback,
+    bool $Terminate = true
+  ): mixed;
+  
+  public static function POST(
+    string|array $Criteria,
+    callable|string|array $Callback,
+    bool $Terminate = true
+  ): mixed;
+  
+  public static function PUT(
+    string|array $Criteria,
+    callable|string|array $Callback,
+    bool $Terminate = true
+  ): mixed;
+  
+  public static function PATCH(
+    string|array $Criteria,
+    callable|string|array $Callback,
+    bool $Terminate = true
+  ): mixed;
+  
+  public static function DELETE(
+    string|array $Criteria,
+    callable|string|array $Callback,
+    bool $Terminate = true
+  ): mixed;
+  
+  public static function HEAD(
+    string|array $Criteria,
+    callable|string|array $Callback,
+    bool $Terminate = true
+  ): mixed;
+  
+  public static function OPTIONS(
+    string|array $Criteria,
+    callable|string|array $Callback,
+    bool $Terminate = true
+  ): mixed;
+  
+  public static function ANY(
+    string|array $Criteria,
+    callable|string|array $Callback,
+    bool $Terminate = true
+  ): mixed;
+  
+  public static function USE(
+    string $Namespace,
+    string $MountPoint,
+    int $MethodBit = self::ANY,
+    bool $Terminate = true
+  ): void;
+  
+  protected static function Dispatch(
+    callable|string|array $Callback,
+    bool $Terminate,
+    array $Arguments = []
+  ): mixed;
+}
+```
+
+## Public Properties
+
+### `$Path`
+
+```php
+public static ?string $Path = null;
+```
+
+The path of the current request. Set by `init()` or the constructor.
+
+### `$Method`
+
+```php
+public static ?string $Method = null;
+```
+
+The HTTP method of the current request as a string (e.g., "GET", "POST").
+
+### `$MethodBit`
+
+```php
+public static int $MethodBit = 0;
+```
+
+Bitwise representation of the HTTP method of the current request.
+
+### `$CriteriaPrefix`
+
+```php
+public static string $CriteriaPrefix = '';
+```
+
+Prefix applied to criteria before matching. Useful for mounting routes under a common path.
+
+### `$ClassPrefix`
+
+```php
+public static string $ClassPrefix = '';
+```
+
+Prefix applied to class names when resolving string callbacks.
+
+## Available Methods
+
+- [Router::init()](/api/init) - Initialize the router context
+- [Router::MATCH()](/api/match) - Match routes with custom HTTP method combinations
+- [Method Shortcuts](/api/shortcuts) - Convenient aliases for common HTTP methods
+- [Router::USE()](/api/use) - Mount a namespace for class-based routing
+
+## Constants
+
+See the [Constants](/api/constants) page for detailed information about HTTP method constants and matching flags.
+
+## Requirements
+
+PHP 8.0 or higher

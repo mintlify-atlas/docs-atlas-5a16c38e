@@ -1,0 +1,387 @@
+---
+title: Namespace Mounting
+description: Learn how to mount entire namespaces to handle requests automatically
+---
+
+Namespace mounting is a powerful feature that maps URL paths directly to PHP namespaces and classes. Instead of defining individual routes, you can mount an entire namespace and let the Router automatically resolve classes and methods based on the request path and HTTP method.
+
+## How It Works
+
+When you mount a namespace:
+
+1. The Router checks if the request path starts with the mount point
+2. It extracts the remaining path after the mount point
+3. It constructs a fully qualified class name by combining the namespace and path
+4. It looks for a public method matching the HTTP method (uppercase)
+5. If found, it instantiates the class and invokes the method
+
+## The USE Method
+
+`Router::USE()` is the method for mounting namespaces.
+
+### Method Signature
+
+```php
+public static function USE(
+    string $Namespace,
+    string $MountPoint,
+    int $MethodBit = self::ANY,
+    bool $Terminate = true
+): void
+```
+
+### Parameters
+
+<ParamField path="Namespace" type="string" required>
+  The PHP namespace to mount. Must be a valid namespace without leading backslash.
+</ParamField>
+
+<ParamField path="MountPoint" type="string" required>
+  The URL path prefix where the namespace is mounted. Requests starting with this path will be handled by the namespace.
+</ParamField>
+
+<ParamField path="MethodBit" type="int" default="Router::ANY">
+  Bitwise representation of HTTP methods to handle. Defaults to all methods.
+</ParamField>
+
+<ParamField path="Terminate" type="bool" default="true">
+  If `true`, PHP execution stops after successful dispatch. Set to `false` to continue.
+</ParamField>
+
+## Basic Example
+
+### Directory Structure
+
+```
+src/
+├── Api/
+│   ├── Users.php
+│   ├── Posts.php
+│   └── Comments.php
+```
+
+### Class Definition
+
+```php
+<?php
+namespace App\Api;
+
+class Users {
+    public function GET() {
+        // Handle GET /api/Users
+        return ['user1', 'user2', 'user3'];
+    }
+    
+    public function POST() {
+        // Handle POST /api/Users
+        return ['status' => 'created'];
+    }
+    
+    public function DELETE() {
+        // Handle DELETE /api/Users
+        return ['status' => 'deleted'];
+    }
+}
+```
+
+### Mounting the Namespace
+
+```php
+use Perritu\Router\Router;
+
+Router::init();
+
+Router::USE('App\\Api', '/api/');
+
+// Now handles:
+// GET    /api/Users    → App\Api\Users::GET()
+// POST   /api/Users    → App\Api\Users::POST()
+// DELETE /api/Users    → App\Api\Users::DELETE()
+// GET    /api/Posts    → App\Api\Posts::GET()
+// POST   /api/Comments → App\Api\Comments::POST()
+```
+
+<Info>
+The Router automatically maps the HTTP method to an uppercase method name in your class. `GET` requests call the `GET()` method, `POST` requests call the `POST()` method, etc.
+</Info>
+
+## Path Resolution
+
+The path after the mount point becomes the class name:
+
+```php
+Router::USE('App\\Controllers', '/app/');
+
+// Request: GET /app/Dashboard
+// Resolves to: App\Controllers\Dashboard::GET()
+
+// Request: POST /app/UserProfile
+// Resolves to: App\Controllers\UserProfile::POST()
+
+// Request: PUT /app/Settings
+// Resolves to: App\Controllers\Settings::PUT()
+```
+
+## Nested Paths
+
+You can structure classes in subdirectories, and they'll be resolved automatically:
+
+### Directory Structure
+
+```
+src/
+├── Api/
+│   ├── V1/
+│   │   ├── Users.php
+│   │   └── Posts.php
+│   └── V2/
+│       ├── Users.php
+│       └── Posts.php
+```
+
+### Namespace Mounting
+
+```php
+Router::USE('App\\Api', '/api/');
+
+// Request: GET /api/V1/Users
+// Resolves to: App\Api\V1\Users::GET()
+
+// Request: POST /api/V2/Posts
+// Resolves to: App\Api\V2\Posts::POST()
+```
+
+The Router converts the path structure directly to namespace structure.
+
+## Restricting HTTP Methods
+
+You can limit which HTTP methods a mounted namespace handles:
+
+### GET Only
+
+```php
+Router::USE(
+    'App\\Public',
+    '/pages/',
+    Router::GET
+);
+
+// Only handles GET requests to /pages/*
+// POST, PUT, DELETE, etc. are ignored
+```
+
+### Multiple Methods
+
+```php
+Router::USE(
+    'App\\Api',
+    '/api/',
+    Router::GET | Router::POST
+);
+
+// Only handles GET and POST requests
+// PUT, DELETE, PATCH, etc. are ignored
+```
+
+### All Methods (Default)
+
+```php
+Router::USE(
+    'App\\Api',
+    '/api/',
+    Router::ANY
+);
+
+// Handles all HTTP methods
+```
+
+<Tip>
+Using method restrictions can improve security by preventing unintended HTTP methods from reaching your classes.
+</Tip>
+
+## Method Requirements
+
+For namespace mounting to work, your classes must follow these rules:
+
+1. **Class must exist**: The fully qualified class name must be loadable
+2. **Method must exist**: The class must have a method matching the HTTP method name (uppercase)
+3. **Method must be public**: Private and protected methods are not accessible
+
+```php
+namespace App\Api;
+
+class Products {
+    // ✓ Valid - public method matching HTTP method
+    public function GET() {
+        return ['product1', 'product2'];
+    }
+    
+    // ✓ Valid - can be static or instance method
+    public static function POST() {
+        return ['status' => 'created'];
+    }
+    
+    // ✗ Invalid - private method won't be called
+    private function DELETE() {
+        return ['status' => 'deleted'];
+    }
+    
+    // ✗ Invalid - lowercase method name won't match
+    public function put() {
+        return ['status' => 'updated'];
+    }
+}
+```
+
+## Silent Failures
+
+<Warning>
+Unlike `Router::MATCH()`, the `USE()` method **does not throw exceptions** when classes or methods aren't found. If a class doesn't exist or doesn't have the appropriate method, the route simply doesn't match and execution continues.
+</Warning>
+
+This allows you to combine namespace mounting with traditional routes:
+
+```php
+// Try namespace mounting first
+Router::USE('App\\Api', '/api/');
+
+// Fallback to traditional route
+Router::GET('/api/status', function() {
+    echo 'API is online';
+});
+
+// If /api/status doesn't resolve to App\Api\status::GET(),
+// the traditional route handles it
+```
+
+## $ClassPrefix Behavior
+
+When dispatching via `Router::USE()`, the `$ClassPrefix` is temporarily cleared:
+
+```php
+Router::$ClassPrefix = 'App\\Controllers';
+
+Router::USE('App\\Api', '/api/');
+
+// Inside USE(), $ClassPrefix is set to '' temporarily
+// After dispatch, it's restored to 'App\\Controllers'
+```
+
+This ensures that namespace-mounted classes are resolved correctly without interference from the global class prefix.
+
+## Complete Example
+
+### Project Structure
+
+```
+src/
+├── Controllers/
+│   ├── Admin/
+│   │   ├── Dashboard.php
+│   │   ├── Users.php
+│   │   └── Settings.php
+│   └── Api/
+│       ├── V1/
+│       │   ├── Users.php
+│       │   └── Posts.php
+│       └── V2/
+│           └── Users.php
+```
+
+### Class Examples
+
+```php
+<?php
+namespace App\Controllers\Admin;
+
+class Dashboard {
+    public function GET() {
+        include __DIR__ . '/../../views/admin/dashboard.php';
+    }
+}
+```
+
+```php
+<?php
+namespace App\Controllers\Api\V1;
+
+class Users {
+    public function GET() {
+        // List users
+        return json_encode(['users' => ['Alice', 'Bob']]);
+    }
+    
+    public function POST() {
+        // Create user
+        $data = json_decode(file_get_contents('php://input'), true);
+        return json_encode(['status' => 'created', 'user' => $data]);
+    }
+    
+    public function PUT() {
+        // Update user
+        $data = json_decode(file_get_contents('php://input'), true);
+        return json_encode(['status' => 'updated', 'user' => $data]);
+    }
+    
+    public function DELETE() {
+        // Delete user
+        return json_encode(['status' => 'deleted']);
+    }
+}
+```
+
+### Routes Configuration
+
+```php
+use Perritu\Router\Router;
+
+Router::init();
+
+// Mount admin namespace
+Router::USE(
+    'App\\Controllers\\Admin',
+    '/admin/',
+    Router::GET | Router::POST
+);
+
+// Mount API v1
+Router::USE(
+    'App\\Controllers\\Api\\V1',
+    '/api/v1/'
+);
+
+// Mount API v2
+Router::USE(
+    'App\\Controllers\\Api\\V2',
+    '/api/v2/'
+);
+
+// Handles:
+// GET    /admin/Dashboard        → Dashboard::GET()
+// POST   /admin/Users            → Users::POST()
+// GET    /api/v1/Users           → V1\Users::GET()
+// POST   /api/v1/Posts           → V1\Posts::POST()
+// DELETE /api/v2/Users           → V2\Users::DELETE()
+```
+
+## Best Practices
+
+<Tip>
+**Use for RESTful APIs**: Namespace mounting is perfect for RESTful APIs where HTTP methods map directly to CRUD operations.
+</Tip>
+
+<Tip>
+**Keep mount points distinct**: Use clear, non-overlapping mount points like `/api/`, `/admin/`, `/app/` to avoid conflicts.
+</Tip>
+
+<Tip>
+**Follow PSR-4 autoloading**: Structure your directories to match your namespaces for seamless autoloading.
+</Tip>
+
+<Tip>
+**Combine with traditional routes**: Use namespace mounting for systematic patterns and traditional routes for exceptions and special cases.
+</Tip>
+
+<Warning>
+**Remember uppercase method names**: HTTP method names must be uppercase in your classes: `GET()`, `POST()`, `PUT()`, etc. Lowercase won't work.
+</Warning>

@@ -1,80 +1,315 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Build your first routes with Perritu/Router in under 5 minutes
 ---
 
-## Get started in three steps
-
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will walk you through creating your first working application with Perritu/Router. You'll learn how to define routes, handle different HTTP methods, and work with dynamic parameters.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  This guide assumes you've already [installed](/installation) Perritu/Router and configured URL rewriting.
 </Note>
+
+## Hello World in 5 Minutes
+
+<Steps>
+  <Step title="Create Your Entry Point">
+    Create an `index.php` file in your web server's document root:
+    
+    ```php index.php
+    <?php
+    require_once __DIR__ . '/vendor/autoload.php';
+    
+    use Perritu\Router\Router;
+    
+    // Define your first route
+    Router::GET('/', function() {
+        echo 'Hello World!';
+    });
+    ```
+    
+    Visit your application at `http://localhost/` and you should see "Hello World!" displayed.
+  </Step>
+  
+  <Step title="Add More Routes">
+    Let's add routes for different pages:
+    
+    ```php index.php
+    <?php
+    require_once __DIR__ . '/vendor/autoload.php';
+    
+    use Perritu\Router\Router;
+    
+    Router::GET('/', function() {
+        echo '<h1>Welcome to Perritu/Router</h1>';
+        echo '<p><a href="/about">About</a> | <a href="/contact">Contact</a></p>';
+    });
+    
+    Router::GET('/about', function() {
+        echo '<h1>About Us</h1>';
+        echo '<p>This is a simple router demonstration.</p>';
+    });
+    
+    Router::GET('/contact', function() {
+        echo '<h1>Contact</h1>';
+        echo '<p>Email us at: info@example.com</p>';
+    });
+    ```
+    
+    Now you can navigate between `/`, `/about`, and `/contact` pages.
+  </Step>
+  
+  <Step title="Work With Dynamic Parameters">
+    Create routes that capture URL parameters using PCRE patterns:
+    
+    ```php index.php
+    <?php
+    require_once __DIR__ . '/vendor/autoload.php';
+    
+    use Perritu\Router\Router;
+    
+    // Static route
+    Router::GET('/', function() {
+        echo '<h1>User Directory</h1>';
+        echo '<ul>';
+        echo '<li><a href="/user/1">Alice</a></li>';
+        echo '<li><a href="/user/2">Bob</a></li>';
+        echo '<li><a href="/user/3">Charlie</a></li>';
+        echo '</ul>';
+    });
+    
+    // Dynamic route with parameter
+    Router::GET(['^/user/(\d+)$', Router::PREG], function($id) {
+        $users = [
+            1 => 'Alice',
+            2 => 'Bob',
+            3 => 'Charlie'
+        ];
+        
+        if (isset($users[$id])) {
+            echo "<h1>User Profile: {$users[$id]}</h1>";
+            echo "<p>User ID: $id</p>";
+        } else {
+            echo "<h1>User not found</h1>";
+        }
+    });
+    ```
+    
+    <Note>
+      When using PCRE patterns, wrap your criteria in an array with the pattern and the `Router::PREG` flag. Captured groups are passed as arguments to your callback.
+    </Note>
+  </Step>
+  
+  <Step title="Handle Different HTTP Methods">
+    Create routes that respond to POST requests:
+    
+    ```php index.php
+    <?php
+    require_once __DIR__ . '/vendor/autoload.php';
+    
+    use Perritu\Router\Router;
+    
+    // Show the form
+    Router::GET('/form', function() {
+        echo '<h1>Contact Form</h1>';
+        echo '<form method="POST" action="/submit">';
+        echo '  <input type="text" name="name" placeholder="Your name" required><br>';
+        echo '  <textarea name="message" placeholder="Your message" required></textarea><br>';
+        echo '  <button type="submit">Send</button>';
+        echo '</form>';
+    });
+    
+    // Handle form submission
+    Router::POST('/submit', function() {
+        $name = $_POST['name'] ?? 'Anonymous';
+        $message = $_POST['message'] ?? '';
+        
+        echo '<h1>Thank You!</h1>';
+        echo "<p>Thanks for your message, $name!</p>";
+        echo "<p><strong>Your message:</strong> $message</p>";
+        echo '<p><a href="/form">Send another message</a></p>';
+    });
+    ```
+    
+    Now visit `/form` to see the form and test the POST handler.
+  </Step>
+</Steps>
+
+## Complete Example Application
+
+Here's a complete working example that demonstrates multiple concepts:
+
+```php index.php
+<?php
+require_once __DIR__ . '/vendor/autoload.php';
+
+use Perritu\Router\Router;
+
+// Home page
+Router::GET('/', function() {
+    echo '<h1>API Demo</h1>';
+    echo '<p>Try these endpoints:</p>';
+    echo '<ul>';
+    echo '<li>GET <a href="/api/users">/api/users</a> - List all users</li>';
+    echo '<li>GET <a href="/api/user/1">/api/user/1</a> - Get specific user</li>';
+    echo '</ul>';
+});
+
+// API: List all users
+Router::GET('/api/users', function() {
+    header('Content-Type: application/json');
+    
+    $users = [
+        ['id' => 1, 'name' => 'Alice', 'email' => 'alice@example.com'],
+        ['id' => 2, 'name' => 'Bob', 'email' => 'bob@example.com'],
+        ['id' => 3, 'name' => 'Charlie', 'email' => 'charlie@example.com']
+    ];
+    
+    echo json_encode($users, JSON_PRETTY_PRINT);
+});
+
+// API: Get specific user
+Router::GET(['^/api/user/(\d+)$', Router::PREG], function($id) {
+    header('Content-Type: application/json');
+    
+    $users = [
+        1 => ['id' => 1, 'name' => 'Alice', 'email' => 'alice@example.com'],
+        2 => ['id' => 2, 'name' => 'Bob', 'email' => 'bob@example.com'],
+        3 => ['id' => 3, 'name' => 'Charlie', 'email' => 'charlie@example.com']
+    ];
+    
+    if (isset($users[$id])) {
+        echo json_encode($users[$id], JSON_PRETTY_PRINT);
+    } else {
+        http_response_code(404);
+        echo json_encode(['error' => 'User not found'], JSON_PRETTY_PRINT);
+    }
+});
+
+// API: Create new user
+Router::POST('/api/user', function() {
+    header('Content-Type: application/json');
+    
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    if (!isset($input['name']) || !isset($input['email'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Name and email are required']);
+        return;
+    }
+    
+    // In a real app, save to database here
+    $newUser = [
+        'id' => rand(1000, 9999),
+        'name' => $input['name'],
+        'email' => $input['email']
+    ];
+    
+    http_response_code(201);
+    echo json_encode($newUser, JSON_PRETTY_PRINT);
+});
+
+// Handle 404
+Router::ANY('.*', function() {
+    http_response_code(404);
+    echo '<h1>404 - Page Not Found</h1>';
+    echo '<p><a href="/">Go back home</a></p>';
+});
+```
+
+## Key Concepts
+
+### Static Routes
+
+Static routes match exact paths:
+
+```php
+Router::GET('/about', function() {
+    echo 'About page';
+});
+```
+
+### Dynamic Routes
+
+Dynamic routes use PCRE patterns to capture parameters:
+
+```php
+// Match /product/123
+Router::GET(['^/product/(\d+)$', Router::PREG], function($id) {
+    echo "Product ID: $id";
+});
+
+// Match /blog/my-post-title
+Router::GET(['^/blog/([a-z0-9-]+)$', Router::IPREG], function($slug) {
+    echo "Blog post: $slug";
+});
+```
+
+<Warning>
+  Always use the `Router::PREG` or `Router::IPREG` (case-insensitive) flag when defining PCRE-based routes.
+</Warning>
+
+### HTTP Method Shortcuts
+
+Perritu/Router provides shortcuts for all common HTTP methods:
+
+```php
+Router::GET('/resource', $callback);      // Handle GET requests
+Router::POST('/resource', $callback);     // Handle POST requests
+Router::PUT('/resource', $callback);      // Handle PUT requests
+Router::PATCH('/resource', $callback);    // Handle PATCH requests
+Router::DELETE('/resource', $callback);   // Handle DELETE requests
+Router::OPTIONS('/resource', $callback);  // Handle OPTIONS requests
+Router::HEAD('/resource', $callback);     // Handle HEAD requests
+
+// Match any HTTP method
+Router::ANY('/resource', $callback);
+```
+
+### Callback Types
+
+You can use different callback types:
+
+```php
+// Closure
+Router::GET('/', function() {
+    echo 'Hello';
+});
+
+// Class method string
+Router::GET('/users', 'App\Controllers\UserController::index');
+
+// Alternative @ syntax
+Router::GET('/users', 'App\Controllers\UserController@index');
+
+// Array format
+Router::GET('/users', ['App\Controllers\UserController', 'index']);
+```
+
+## Testing Your Routes
+
+You can test your routes using curl:
+
+```bash
+# Test GET request
+curl http://localhost/api/users
+
+# Test POST request
+curl -X POST http://localhost/api/user \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Dave","email":"dave@example.com"}'
+
+# Test with parameters
+curl http://localhost/api/user/1
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Routing Methods" icon="route" href="/concepts/routing-methods">
+    Learn advanced routing techniques including HTTP methods and matching
+  </Card>
+  
+  <Card title="API Reference" icon="book" href="/api/router-class">
+    Explore the complete Router class API documentation
+  </Card>
+</CardGroup>

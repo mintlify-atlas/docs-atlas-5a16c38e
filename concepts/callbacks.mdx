@@ -1,0 +1,354 @@
+---
+title: Callbacks
+description: Learn all the ways to define route callbacks in Perritu Router
+---
+
+When a route matches, the Router executes a callback. The Router supports multiple callback formats, giving you flexibility in how you structure your application.
+
+## Callback Types
+
+The Router accepts three callback formats:
+
+1. **Closures** (anonymous functions)
+2. **Arrays** (class and method pairs)
+3. **Strings** (class and method as a string)
+
+## Closures
+
+Closures are anonymous functions defined inline. They're perfect for simple routes or prototyping.
+
+### Basic Closure
+
+```php
+Router::GET('/', function() {
+    echo 'Hello, World!';
+});
+```
+
+### Closure with Parameters
+
+When using regex patterns with capturing groups, parameters are passed to the closure:
+
+```php
+Router::GET(
+    ['\/users\/(\d+)', Router::PREG],
+    function(string $userId) {
+        echo "User ID: $userId";
+    }
+);
+```
+
+### Multiple Parameters
+
+```php
+Router::GET(
+    ['\/posts\/(\d+)\/comments\/(\d+)', Router::PREG],
+    function(string $postId, string $commentId) {
+        echo "Post $postId, Comment $commentId";
+    }
+);
+```
+
+### Closure with Return Value
+
+```php
+$result = Router::GET('/', function() {
+    return ['status' => 'success'];
+}, false); // Don't terminate
+
+// $result contains ['status' => 'success']
+```
+
+<Info>
+Closures are callable values, so they're executed directly via `call_user_func_array()`.
+</Info>
+
+## Array Callbacks
+
+Array callbacks specify a class and method as a two-element array: `[ClassName::class, 'methodName']`.
+
+### Basic Array Callback
+
+```php
+class HomeController {
+    public function index() {
+        echo 'Home page';
+    }
+}
+
+Router::GET('/', [HomeController::class, 'index']);
+```
+
+### Array Callback with Parameters
+
+```php
+class UserController {
+    public function show(string $id) {
+        echo "Showing user $id";
+    }
+}
+
+Router::GET(
+    ['\/users\/(\d+)', Router::PREG],
+    [UserController::class, 'show']
+);
+```
+
+### Using Namespaced Classes
+
+```php
+namespace App\Controllers;
+
+class ProductController {
+    public function details(string $slug) {
+        echo "Product: $slug";
+    }
+}
+
+// In your routes file:
+use App\Controllers\ProductController;
+
+Router::GET(
+    ['\/products\/([a-z0-9-]+)', Router::PREG],
+    [ProductController::class, 'details']
+);
+```
+
+<Warning>
+The method must be **public**. Private and protected methods will throw an exception.
+</Warning>
+
+## String Callbacks
+
+String callbacks define the class and method as a single string. The Router supports two separators: `::` and `@`.
+
+### Double-Colon Syntax
+
+```php
+Router::GET('/', 'HomeController::index');
+```
+
+This syntax matches PHP's native static method call syntax.
+
+### At-Sign Syntax
+
+```php
+Router::GET('/', 'HomeController@index');
+```
+
+This syntax is inspired by Laravel and other modern frameworks.
+
+### Fully Qualified Class Names
+
+```php
+Router::GET('/', 'App\\Controllers\\HomeController::index');
+```
+
+<Note>
+Both backslashes (`\`) and forward slashes (`/`) are normalized to backslashes internally, so these are equivalent:
+
+```php
+Router::GET('/', 'App\\Controllers\\HomeController::index');
+Router::GET('/', 'App/Controllers/HomeController::index');
+```
+</Note>
+
+### Mixing Separators
+
+You can mix path and namespace separators:
+
+```php
+// These are all equivalent:
+Router::GET('/', 'App\\Controllers\\HomeController::index');
+Router::GET('/', 'App/Controllers/HomeController::index');
+Router::GET('/', 'App/Controllers/HomeController@index');
+```
+
+## Using $ClassPrefix
+
+The `Router::$ClassPrefix` static property is prepended to all string and array callbacks, allowing you to set a base namespace for your controllers.
+
+### Setting a Base Namespace
+
+```php
+Router::$ClassPrefix = 'App\\Controllers';
+
+Router::GET('/', 'HomeController::index');
+Router::GET('/about', 'PageController@about');
+
+// Actually resolves to:
+// App\Controllers\HomeController::index
+// App\Controllers\PageController::about
+```
+
+### Grouping Routes by Namespace
+
+```php
+// Admin routes
+Router::$ClassPrefix = 'App\\Controllers\\Admin';
+Router::GET('/admin/dashboard', 'DashboardController@index');
+Router::GET('/admin/users', 'UserController@list');
+
+// Public routes
+Router::$ClassPrefix = 'App\\Controllers\\Public';
+Router::GET('/', 'HomeController@index');
+Router::GET('/about', 'PageController@about');
+```
+
+### Resetting the Prefix
+
+```php
+// Set a prefix
+Router::$ClassPrefix = 'App\\Controllers';
+
+Router::GET('/dashboard', 'DashboardController@index');
+
+// Clear the prefix
+Router::$ClassPrefix = '';
+
+Router::GET('/api/status', 'ApiStatusController::check');
+```
+
+<Info>
+The `$ClassPrefix` is applied to both string and array callbacks. For closures, it has no effect since they're already callable.
+</Info>
+
+## How Callbacks Are Dispatched
+
+Here's what happens internally when a route matches:
+
+### For Closures
+
+1. Check if callback is callable
+2. Execute via `call_user_func_array($callback, $arguments)`
+3. Return the result
+
+### For Arrays and Strings
+
+1. Convert array to string format (`[Class, method]` → `Class::method`)
+2. Apply `$ClassPrefix`
+3. Normalize slashes and backslashes
+4. Convert `@` separator to `::` 
+5. Split into class name and method name
+6. Verify class exists (throws exception if not)
+7. Use reflection to verify method exists and is public (throws exceptions if not)
+8. Instantiate the class
+9. Invoke the method with arguments
+10. Return the result
+
+## Error Handling
+
+<Warning>
+The Router throws exceptions for invalid callbacks:
+
+- **Class not found**: When the specified class doesn't exist
+- **Method not found**: When the method doesn't exist in the class
+- **Method not public**: When the method exists but isn't public
+</Warning>
+
+```php
+// Throws: "Class App\Controllers\MissingController not found."
+Router::GET('/', 'App\\Controllers\\MissingController::index');
+
+// Throws: "Method missing not found in class HomeController."
+Router::GET('/', 'HomeController::missing');
+
+class PrivateController {
+    private function secret() {
+        echo 'Secret';
+    }
+}
+
+// Throws: "Method secret in class PrivateController is not public."
+Router::GET('/', [PrivateController::class, 'secret']);
+```
+
+## Complete Examples
+
+### Mixed Callback Styles
+
+```php
+use App\Controllers\UserController;
+use App\Controllers\AdminController;
+
+Router::$ClassPrefix = 'App\\Controllers';
+
+// Closure for simple route
+Router::GET('/', function() {
+    include 'views/home.php';
+});
+
+// Array callback with class constant
+Router::GET('/profile', [UserController::class, 'profile']);
+
+// String callback with :: separator
+Router::GET('/settings', 'UserController::settings');
+
+// String callback with @ separator
+Router::GET('/admin', 'AdminController@dashboard');
+
+// Regex route with closure
+Router::GET(
+    ['\/posts\/(\d+)', Router::PREG],
+    function(string $postId) {
+        $controller = new PostController();
+        $controller->show($postId);
+    }
+);
+```
+
+### RESTful Controller Pattern
+
+```php
+Router::$ClassPrefix = 'App\\Controllers\\Api';
+
+Router::GET('/api/users', 'UserController@index');
+Router::POST('/api/users', 'UserController@store');
+Router::GET(
+    ['\/api\/users\/(\d+)', Router::PREG],
+    'UserController@show'
+);
+Router::PUT(
+    ['\/api\/users\/(\d+)', Router::PREG],
+    'UserController@update'
+);
+Router::DELETE(
+    ['\/api\/users\/(\d+)', Router::PREG],
+    'UserController@destroy'
+);
+```
+
+### Middleware Pattern with Closures
+
+```php
+// Authentication middleware
+Router::GET('/admin/dashboard', function() {
+    // Check authentication
+    if (!isset($_SESSION['user'])) {
+        header('Location: /login');
+        exit;
+    }
+    return true;
+}, false); // Don't terminate
+
+// Main handler
+Router::GET('/admin/dashboard', 'Admin\\DashboardController@index');
+```
+
+## Best Practices
+
+<Tip>
+**Use closures for simple logic**: Perfect for quick prototypes, simple views, or middleware-style checks.
+</Tip>
+
+<Tip>
+**Use classes for complex logic**: When you have business logic, validation, or multiple dependencies, use controller classes.
+</Tip>
+
+<Tip>
+**Use $ClassPrefix consistently**: Set it once at the start of your routes file to avoid repeating namespaces.
+</Tip>
+
+<Tip>
+**Keep methods public**: Only public methods can be used as route callbacks. Design your controllers accordingly.
+</Tip>

@@ -1,0 +1,293 @@
+---
+title: "Constants"
+description: "HTTP method constants and matching flags"
+---
+
+## HTTP Method Constants
+
+The Router class defines bitwise constants for HTTP methods, allowing you to combine multiple methods using bitwise operators.
+
+### Available Constants
+
+```php
+public const DELETE  = 1;   // 0000001 (Bit 1)
+public const GET     = 2;   // 0000010 (Bit 2)
+public const HEAD    = 4;   // 0000100 (Bit 3)
+public const OPTIONS = 8;   // 0001000 (Bit 4)
+public const PATCH   = 16;  // 0010000 (Bit 5)
+public const POST    = 32;  // 0100000 (Bit 6)
+public const PUT     = 64;  // 1000000 (Bit 7)
+public const ANY     = 127; // 1111111 (Bits 1-7, all methods)
+```
+
+### Constant Reference
+
+| Constant | Value | Binary | Description |
+|----------|-------|--------|-------------|
+| `Router::DELETE` | 1 | 0000001 | DELETE requests |
+| `Router::GET` | 2 | 0000010 | GET requests |
+| `Router::HEAD` | 4 | 0000100 | HEAD requests |
+| `Router::OPTIONS` | 8 | 0001000 | OPTIONS requests |
+| `Router::PATCH` | 16 | 0010000 | PATCH requests |
+| `Router::POST` | 32 | 0100000 | POST requests |
+| `Router::PUT` | 64 | 1000000 | PUT requests |
+| `Router::ANY` | 127 | 1111111 | All HTTP methods |
+
+### Usage Examples
+
+#### Single Method
+
+```php
+use Perritu\Router\Router;
+
+// Match only GET requests
+Router::MATCH(
+    Router::GET,
+    '/users',
+    function() {
+        echo 'List users';
+    }
+);
+```
+
+#### Combining Methods with Bitwise OR
+
+```php
+// Match both GET and POST requests
+Router::MATCH(
+    Router::GET | Router::POST,
+    '/form',
+    function() {
+        if (Router::$Method === 'GET') {
+            echo 'Show form';
+        } else {
+            echo 'Process form';
+        }
+    }
+);
+```
+
+#### Combining Multiple Methods
+
+```php
+// Match GET, POST, PUT, and DELETE
+Router::MATCH(
+    Router::GET | Router::POST | Router::PUT | Router::DELETE,
+    '/api/resource',
+    [ResourceController::class, 'handle']
+);
+```
+
+#### All Methods Except One
+
+```php
+// Match all methods except POST
+Router::MATCH(
+    Router::ANY & ~Router::POST,  // Bitwise AND with NOT POST
+    '/read-only',
+    function() {
+        echo 'Read-only endpoint';
+    }
+);
+```
+
+#### Safe Methods Only
+
+```php
+// Match only safe methods (GET and HEAD)
+Router::MATCH(
+    Router::GET | Router::HEAD,
+    '/safe-endpoint',
+    function() {
+        echo 'Safe method';
+    }
+);
+```
+
+## Matching Flag Constants
+
+Matching flags control how the criteria string is evaluated against the request path.
+
+### Available Flags
+
+```php
+public const CASE_I = 1; // 001 - Case-insensitive
+public const FLAT   = 2; // 010 - Flat string matching
+public const PREG   = 4; // 100 - Regular expression matching
+public const IFLAT  = 3; // 011 - Case-insensitive flat (CASE_I | FLAT)
+public const IPREG  = 5; // 101 - Case-insensitive regex (CASE_I | PREG)
+```
+
+### Flag Reference
+
+| Constant | Value | Binary | Description |
+|----------|-------|--------|-------------|
+| `Router::CASE_I` | 1 | 001 | Case-insensitive matching |
+| `Router::FLAT` | 2 | 010 | Exact string match |
+| `Router::PREG` | 4 | 100 | Regular expression match |
+| `Router::IFLAT` | 3 | 011 | Case-insensitive flat (default) |
+| `Router::IPREG` | 5 | 101 | Case-insensitive regex |
+
+### Flag Bit Meaning
+
+- **Bit 1** (CASE_I): When set, matching is case-insensitive
+- **Bit 2** (FLAT): When set, use exact string matching
+- **Bit 3** (PREG): When set, use regular expression matching
+
+### Usage Examples
+
+#### Default Matching (Case-Insensitive Flat)
+
+```php
+// These are equivalent - IFLAT is the default
+Router::GET('/users', $callback);
+Router::GET(['/users', Router::IFLAT], $callback);
+```
+
+#### Case-Sensitive Exact Match
+
+```php
+// Match exactly '/API' - case matters
+Router::GET(
+    ['/API', Router::FLAT],
+    function() {
+        echo 'Exact match: /API';
+    }
+);
+
+// '/api' or '/Api' will NOT match
+```
+
+#### Regular Expression Match
+
+```php
+// Match /user/123, /user/456, etc.
+Router::GET(
+    ['\/user\/(\d+)\/?', Router::PREG],
+    function($userId) {
+        echo "User ID: {$userId}";
+    }
+);
+```
+
+#### Case-Insensitive Regular Expression
+
+```php
+// Match /article/tech or /Article/TECH (case-insensitive)
+Router::GET(
+    ['\/article\/([a-z]+)\/?', Router::IPREG],
+    function($category) {
+        echo "Category: {$category}";
+    }
+);
+```
+
+#### Case-Insensitive but Not Regex
+
+```php
+// Match /users, /Users, /USERS (case-insensitive, not regex)
+Router::GET(
+    ['/users', Router::CASE_I],
+    function() {
+        echo 'User list';
+    }
+);
+```
+
+## Combining Flags with Bitwise Operations
+
+### Custom Flag Combinations
+
+```php
+// Case-insensitive + Flat (same as IFLAT)
+$flags = Router::CASE_I | Router::FLAT;
+Router::GET(['/path', $flags], $callback);
+
+// Case-insensitive + Regex (same as IPREG)
+$flags = Router::CASE_I | Router::PREG;
+Router::GET(['/pattern', $flags], $callback);
+```
+
+### Checking Flags in Code
+
+The Router internally checks flags like this:
+
+```php
+// Check if FLAT flag is set
+if ($flags & Router::FLAT) {
+    // Use flat string matching
+}
+
+// Check if PREG flag is set
+if ($flags & Router::PREG) {
+    // Use regex matching
+}
+
+// Check if CASE_I flag is set
+if ($flags & Router::CASE_I) {
+    // Make comparison case-insensitive
+}
+```
+
+## Best Practices
+
+### HTTP Method Constants
+
+1. **Use specific methods** when possible for clarity:
+   ```php
+   // Good
+   Router::GET('/users', $callback);
+   
+   // Less clear
+   Router::MATCH(Router::ANY, '/users', $callback);
+   ```
+
+2. **Combine methods logically**:
+   ```php
+   // Form handling - show form on GET, process on POST
+   Router::MATCH(
+       Router::GET | Router::POST,
+       '/contact',
+       [ContactController::class, 'handle']
+   );
+   ```
+
+3. **Use Router::ANY sparingly**:
+   ```php
+   // Good use case: middleware
+   Router::MATCH(
+       Router::ANY,
+       ['^/admin/', Router::PREG],
+       [AuthMiddleware::class, 'check'],
+       false
+   );
+   ```
+
+### Matching Flag Constants
+
+1. **Default is usually fine**:
+   ```php
+   // No need to specify IFLAT explicitly
+   Router::GET('/path', $callback);
+   ```
+
+2. **Use PREG for dynamic routes**:
+   ```php
+   Router::GET(
+       ['\/post\/(\d+)\/?', Router::PREG],
+       $callback
+   );
+   ```
+
+3. **Use FLAT for case-sensitive paths**:
+   ```php
+   // API versioning with case-sensitive paths
+   Router::GET(['/API/v1', Router::FLAT], $callback);
+   Router::GET(['/API/v2', Router::FLAT], $callback);
+   ```
+
+## See Also
+
+- [Router::MATCH()](/api/match) - Main routing method that uses these constants
+- [Method Shortcuts](/api/shortcuts) - Convenient shortcuts for common HTTP methods
+- [Router::USE()](/api/use) - Namespace mounting with method constants

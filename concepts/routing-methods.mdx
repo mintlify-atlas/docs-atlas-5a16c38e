@@ -1,0 +1,284 @@
+---
+title: Routing Methods
+description: Understand HTTP method constants and routing methods in Perritu Router
+---
+
+The Router uses bitwise constants to represent HTTP methods efficiently. This approach allows combining multiple methods in a single route definition and enables fast method matching.
+
+## HTTP Method Constants
+
+The Router defines seven HTTP method constants as powers of 2, allowing bitwise operations:
+
+```php
+public const DELETE  = 1;   // 0000001 (Bit 1)
+public const GET     = 2;   // 0000010 (Bit 2)
+public const HEAD    = 4;   // 0000100 (Bit 3)
+public const OPTIONS = 8;   // 0001000 (Bit 4)
+public const PATCH   = 16;  // 0010000 (Bit 5)
+public const POST    = 32;  // 0100000 (Bit 6)
+public const PUT     = 64;  // 1000000 (Bit 7)
+public const ANY     = 127; // 1111111 (Bits 1-7)
+```
+
+<Info>
+The `ANY` constant (127) is a bitwise combination of all seven HTTP methods, meaning it matches any HTTP verb.
+</Info>
+
+## Combining Methods with Bitwise OR
+
+Use the bitwise OR operator (`|`) to create routes that respond to multiple HTTP methods:
+
+```php
+// Handle both GET and POST requests
+Router::MATCH(
+    Router::GET | Router::POST,
+    '/',
+    function() {
+        echo 'Home page';
+    }
+);
+```
+
+```php
+// Handle PUT, PATCH, and POST
+Router::MATCH(
+    Router::PUT | Router::PATCH | Router::POST,
+    '/api/users',
+    function() {
+        // Handle user creation/update
+    }
+);
+```
+
+## The MATCH Method
+
+`Router::MATCH()` is the core routing method. All other routing methods are shortcuts that call `MATCH()` internally.
+
+### Method Signature
+
+```php
+public static function MATCH(
+    int $MethodBit,
+    string|array $Criteria,
+    callable|string|array $Callback,
+    bool $Terminate = true
+): mixed
+```
+
+### Parameters
+
+<ParamField path="MethodBit" type="int" required>
+  Bitwise representation of HTTP methods to match. Combine multiple methods with `|`.
+</ParamField>
+
+<ParamField path="Criteria" type="string|array" required>
+  The path pattern to match. Can be a simple string or an array with matching flags.
+</ParamField>
+
+<ParamField path="Callback" type="callable|string|array" required>
+  The function, method, or class to execute when matched.
+</ParamField>
+
+<ParamField path="Terminate" type="bool" default="true">
+  If `true`, PHP execution stops after the callback runs. Set to `false` to continue execution.
+</ParamField>
+
+### Return Value
+
+Returns the callback's return value if matched, or `null` if not matched.
+
+### Example
+
+```php
+// Handle GET and POST to the index
+Router::MATCH(
+    Router::GET | Router::POST,
+    '/',
+    function() {
+        echo 'Hello world!';
+    }
+);
+```
+
+## HTTP Method Shortcuts
+
+The Router provides convenient shortcut methods for each HTTP verb. These methods internally call `MATCH()` with the appropriate method bit.
+
+### Available Shortcuts
+
+<CardGroup cols={2}>
+  <Card title="GET" icon="arrow-down">
+    Handle GET requests
+  </Card>
+  <Card title="POST" icon="paper-plane">
+    Handle POST requests
+  </Card>
+  <Card title="PUT" icon="upload">
+    Handle PUT requests
+  </Card>
+  <Card title="PATCH" icon="pen">
+    Handle PATCH requests
+  </Card>
+  <Card title="DELETE" icon="trash">
+    Handle DELETE requests
+  </Card>
+  <Card title="HEAD" icon="circle-info">
+    Handle HEAD requests
+  </Card>
+  <Card title="OPTIONS" icon="list">
+    Handle OPTIONS requests
+  </Card>
+  <Card title="ANY" icon="asterisk">
+    Handle any HTTP method
+  </Card>
+</CardGroup>
+
+### Shortcut Signature
+
+All shortcut methods share the same signature:
+
+```php
+public static function {METHOD}(
+    string|array $Criteria,
+    callable|string|array $Callback,
+    bool $Terminate = true
+): mixed
+```
+
+### GET Example
+
+```php
+Router::GET('/users', function() {
+    echo 'User list';
+});
+
+// Equivalent to:
+Router::MATCH(
+    Router::GET,
+    '/users',
+    function() {
+        echo 'User list';
+    }
+);
+```
+
+### POST Example
+
+```php
+Router::POST('/users', function() {
+    // Create new user
+    echo 'User created';
+});
+```
+
+### DELETE Example
+
+```php
+Router::DELETE('/users/123', function() {
+    // Delete user 123
+    echo 'User deleted';
+});
+```
+
+### ANY Example
+
+```php
+// Matches all HTTP methods
+Router::ANY('/api/debug', function() {
+    echo 'Debug endpoint - accepts any method';
+});
+```
+
+## Continuing Execution
+
+By default, PHP execution terminates after a successful route match. Set `$Terminate` to `false` to continue:
+
+```php
+Router::GET('/', function() {
+    echo 'Middleware logic';
+    return 'middleware_result';
+}, false); // Don't terminate
+
+Router::GET('/', function() {
+    echo 'Main handler';
+});
+```
+
+<Warning>
+When `$Terminate` is `false`, the router returns the callback's return value. The script continues executing, potentially matching additional routes.
+</Warning>
+
+## Method Matching Logic
+
+The router uses bitwise AND to check if the current request method matches:
+
+```php
+if (($MethodBit & self::$MethodBit) === 0) return null;
+```
+
+This means:
+- If the request method bit is set in `$MethodBit`, the route matches
+- If not, the router returns `null` and continues to the next route
+
+### Example Matching
+
+```php
+// Current request: GET (bit value: 2)
+
+// This matches (2 & 2 = 2, not 0)
+Router::GET('/', $callback);
+
+// This matches (6 & 2 = 2, not 0)
+Router::MATCH(Router::GET | Router::HEAD, '/', $callback);
+
+// This doesn't match (32 & 2 = 0)
+Router::POST('/', $callback);
+```
+
+## Best Practices
+
+<Tip>
+**Use shortcuts for single methods**: When matching a single HTTP method, use the shortcut methods (`GET()`, `POST()`, etc.) for cleaner, more readable code.
+</Tip>
+
+<Tip>
+**Use MATCH for multiple methods**: When you need to handle multiple HTTP methods with the same logic, use `MATCH()` with combined method bits.
+</Tip>
+
+<Tip>
+**Be specific**: Avoid using `ANY` unless you genuinely need to handle all HTTP methods. Explicit method matching leads to more maintainable code.
+</Tip>
+
+## Complete Example
+
+```php
+use Perritu\Router\Router;
+
+Router::init();
+
+// Simple GET route
+Router::GET('/about', function() {
+    include 'about.php';
+});
+
+// Form that accepts both GET (show form) and POST (submit form)
+Router::MATCH(
+    Router::GET | Router::POST,
+    '/contact',
+    function() {
+        if (Router::$Method === 'POST') {
+            // Process form submission
+            echo 'Message sent!';
+        } else {
+            // Show form
+            include 'contact-form.php';
+        }
+    }
+);
+
+// RESTful API endpoint
+Router::POST('/api/users', 'Api\UserController@create');
+Router::GET('/api/users', 'Api\UserController@index');
+Router::PUT('/api/users', 'Api\UserController@update');
+Router::DELETE('/api/users', 'Api\UserController@destroy');
+```
