@@ -1,0 +1,73 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Perritu/Router",
+  "projectDescription": "A lightweight, simple, yet blazing fast PHP router for handling HTTP requests with static and dynamic routing.",
+  "theme": "palm",
+  "primaryColor": "#824010",
+  "lightColor": "#d5dcec",
+  "darkColor": "#181a1d",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "introduction",
+          "installation",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Core Concepts",
+        "pages": [
+          "concepts/initialization",
+          "concepts/routing-methods",
+          "concepts/matching-criteria",
+          "concepts/callbacks",
+          "concepts/namespace-mounting"
+        ]
+      },
+      {
+        "group": "API Reference",
+        "pages": [
+          "api/router-class",
+          "api/init",
+          "api/match",
+          "api/shortcuts",
+          "api/use",
+          "api/constants"
+        ]
+      },
+      {
+        "group": "Examples",
+        "pages": [
+          "examples/basic-routing",
+          "examples/regex-patterns",
+          "examples/class-callbacks",
+          "examples/namespace-routing"
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "HTTP method routing (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS, ANY)",
+    "Static and dynamic PCRE-based routing with regex pattern matching",
+    "Route shortcuts for convenient method-specific routing",
+    "Namespace mounting for organized route structure",
+    "Multiple callback formats: closures, class methods, and string references",
+    "Custom path and HTTP method override support",
+    "Bitwise HTTP method combination for flexible route handling"
+  ],
+  "publicApiSurface": [
+    "Router::init(?string $Path, ?string $Method, ?string $Host, ?int $Port): string",
+    "Router::MATCH(int $MethodBit, string|array $Criteria, callable|string|array $Callback, bool $Terminate = true): mixed",
+    "Router::GET(string|array $Criteria, callable|string|array $Callback, bool $Terminate = true): mixed",
+    "Router::POST(string|array $Criteria, callable|string|array $Callback, bool $Terminate = true): mixed",
+    "Router::PUT(string|array $Criteria, callable|string|array $Callback, bool $Terminate = true): mixed",
+    "Router::PATCH(string|array $Criteria, callable|string|array $Callback, bool $Terminate = true): mixed",
+    "Router::DELETE(string|array $Criteria, callable|string|array $Callback, bool $Terminate = true): mixed",
+    "Router::HEAD(string|array $Criteria, callable|string|array $Callback, bool $Terminate = true): mixed",
+    "Router::OPTIONS(string|array $Criteria, callable|string|array $Callback, bool $Terminate = true): mixed",
+    "Router::ANY(string|array $Criteria, callable|string|array $Callback, bool $Terminate = true): mixed",
+    "Router::USE(string $Namespace, string $MountPoint, int $MethodBit = self::ANY, bool $Terminate = true): void"
+  ]
+}
